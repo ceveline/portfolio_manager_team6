@@ -117,7 +117,7 @@ Buy stocks:
 ```json
 {
   "ticker": "AAPL",
-  "quantity": 10,
+  "quantity": 12,
   "purchase_price": 150.25,
   "purchase_date": "2026-07-20"
 }
