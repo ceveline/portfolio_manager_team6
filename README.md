@@ -1,5 +1,11 @@
 # Portfolio Manager
 
+## Team Members
+
+1. Kelly Morilla
+2. David Soriano
+3. Ceveline Evangelista
+
 A stock portfolio management app that tracks holdings, transactions, and portfolio value in real-time.
 
 ## Features
