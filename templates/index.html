@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Portfolio Manager</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <header>
+    <h1>My Portfolio</h1>
+    <div id="portfolio-summary">
+      <div id="total-value">Total Value: <strong>$0.00</strong></div>
+      <div id="total-shares">Total Shares: <strong>0</strong></div>
+    </div>
+  </header>
+
+  <main>
+    <section id="add-holding">
+      <h2>Buy Stock</h2>
+      <form id="holding-form">
+        <select id="ticker" required>
+          <option value="">Select a ticker...</option>
+          <option value="AAPL">AAPL - Apple</option>
+          <option value="GOOGL">GOOGL - Google</option>
+          <option value="MSFT">MSFT - Microsoft</option>
+          <option value="TSLA">TSLA - Tesla</option>
+          <option value="META">META - Meta</option>
+          <option value="AMZN">AMZN - Amazon</option>
+          <option value="NVDA">NVDA - NVIDIA</option>
+          <option value="SPY">SPY - S&P 500 ETF</option>
+        </select>
+        <input type="number" id="quantity" placeholder="Quantity" step="any" required />
+        <div id="buy-details">
+          <div id="buy-price-display">Current Price: <strong id="purchase_price">-</strong></div>
+        </div>
+        <input type="date" id="purchase_date" />
+        <button type="submit">Buy</button>
+      </form>
+    </section>
+
+    <section id="sell-holding">
+      <h2>Sell Stock</h2>
+      <form id="sell-form">
+        <select id="sell-ticker" required>
+          <option value="">Select a stock to sell...</option>
+        </select>
+        <input type="number" id="sell-quantity-input" placeholder="Quantity to sell" step="any" required />
+        <div id="sell-details">
+          <div id="sell-price-display">Current Price: <strong id="sell-price">-</strong></div>
+        </div>
+        <input type="date" id="sell_date" />
+        <button type="submit">Sell</button>
+      </form>
+    </section>
+
+    <section id="portfolio">
+      <h2>Portfolio</h2>
+      <table id="consolidated-table">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Quantity</th>
+            <th>Avg Price</th>
+          </tr>
+        </thead>
+        <tbody id="consolidated-body"></tbody>
+      </table>
+    </section>
+
+    <section id="history">
+      <h2>Transaction History</h2>
+      <table id="history-table">
+        <thead>
+          <tr>
+            <th>Action</th>
+            <th>Ticker</th>
+            <th>Quantity</th>
+            <th>Price</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="history-body"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
