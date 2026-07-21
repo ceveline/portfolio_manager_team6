@@ -32,11 +32,18 @@ def get_stock_price(ticker):
     # Try AWS cached price API first
     try:
         aws_url = f"https://c4rm9elh30.execute-api.us-east-1.amazonaws.com/default/cachedPriceData?ticker={ticker_upper}"
-        response = requests.get(aws_url, timeout=5)
+        response = requests.get(aws_url, timeout=10)
         if response.status_code == 200:
             data = response.json()
-            if "price" in data:
-                return jsonify({"ticker": ticker_upper, "price": data["price"]}), 200
+            if isinstance(data, dict):
+                if "price" in data and data["price"] is not None:
+                    return jsonify({"ticker": ticker_upper, "price": data["price"]}), 200
+
+                price_data = data.get("price_data") or {}
+                close_prices = price_data.get("close") or []
+                if close_prices:
+                    price = float(close_prices[-1])
+                    return jsonify({"ticker": ticker_upper, "price": price}), 200
     except Exception:
         pass
     

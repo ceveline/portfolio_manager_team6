@@ -33,8 +33,8 @@
         <div id="buy-details">
           <div id="buy-price-display">Current Price: <strong id="purchase_price">-</strong></div>
         </div>
-        <input type="date" id="purchase_date" />
-        <button type="submit">Buy</button>
+        <input type="date" id="purchase_date" disabled/>
+        <button id="buy-btn" type="submit">Buy</button>
       </form>
     </section>
 
@@ -46,15 +46,17 @@
         </select>
         <input type="number" id="sell-quantity-input" placeholder="Quantity to sell" step="any" required />
         <div id="sell-details">
+          <div id="sell-quantity-display">Available: <strong id="sell-quantity">-</strong></div>
           <div id="sell-price-display">Current Price: <strong id="sell-price">-</strong></div>
         </div>
-        <input type="date" id="sell_date" />
-        <button type="submit">Sell</button>
+        <input type="date" id="sell_date" disabled/>
+        <button id="sell-btn" type="submit">Sell</button>
       </form>
     </section>
 
     <section id="portfolio">
       <h2>Portfolio</h2>
+      <button id="refresh-data-btn" type="button">Load Existing Data</button>
       <table id="consolidated-table">
         <thead>
           <tr>
