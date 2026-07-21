@@ -18,16 +18,21 @@ async function loadPortfolio() {
   clearSellDetails();
 }
 
+function getTodayDate() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
   const body = {
     ticker,
     quantity,
     purchase_price: purchasePrice,
+    purchase_date: purchaseDate || getTodayDate(),
   };
-
-  if (purchaseDate) {
-    body.purchase_date = purchaseDate;
-  }
 
   const response = await fetch(`${API_BASE}/holdings`, {
     method: "POST",
@@ -162,7 +167,7 @@ document.getElementById("holding-form").addEventListener("submit", async (e) => 
   const ticker = document.getElementById("ticker").value;
   const quantity = parseFloat(document.getElementById("quantity").value);
   const purchasePrice = parseFloat(document.getElementById("purchase_price").textContent.replace("$", ""));
-  const purchaseDate = document.getElementById("purchase_date").value;
+  const purchaseDate = getTodayDate();
 
   if (!ticker || !quantity || !purchasePrice) {
     return;
@@ -184,7 +189,7 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
 
   const holdingId = document.getElementById("sell-ticker").value;
   const quantity = parseFloat(document.getElementById("sell-quantity-input").value);
-  const sellDate = document.getElementById("sell_date").value;
+  const sellDate = getTodayDate();
 
   if (!holdingId || !quantity || quantity <= 0) return;
 
@@ -200,4 +205,7 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
 
 document.getElementById("refresh-data-btn").addEventListener("click", loadPortfolio);
 
+
+//Handle date
+document.getElementById("current-date").textContent = getTodayDate();
 loadPortfolio();
