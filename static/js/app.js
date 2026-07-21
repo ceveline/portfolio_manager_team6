@@ -18,6 +18,31 @@ async function loadPortfolio() {
   clearSellDetails();
 }
 
+async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
+  const body = {
+    ticker,
+    quantity,
+    purchase_price: purchasePrice,
+  };
+
+  if (purchaseDate) {
+    body.purchase_date = purchaseDate;
+  }
+
+  const response = await fetch(`${API_BASE}/holdings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Unable to buy stock");
+  }
+
+  return response.json();
+}
+
 function loadConsolidated(consolidated) {
   const tbody = document.getElementById("consolidated-body");
   tbody.innerHTML = "";
@@ -74,8 +99,11 @@ function populateSellDropdown(holdings) {
 }
 
 function clearSellDetails() {
-  document.getElementById("sell-quantity").textContent = "-";
-  document.getElementById("sell-price").textContent = "-";
+  const sellQuantityEl = document.getElementById("sell-quantity");
+  const sellPriceEl = document.getElementById("sell-price");
+
+  if (sellQuantityEl) sellQuantityEl.textContent = "-";
+  if (sellPriceEl) sellPriceEl.textContent = "-";
 }
 
 document.getElementById("sell-ticker").addEventListener("change", async (e) => {
@@ -90,7 +118,9 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
   const holding = holdingsData.find(h => h.id == holdingId);
   if (!holding) return;
 
-  document.getElementById("sell-quantity").textContent = holding.quantity;
+  const sellQuantityEl = document.getElementById("sell-quantity");
+  if (sellQuantityEl) sellQuantityEl.textContent = holding.quantity;
+
   document.getElementById("sell-quantity-input").value = "";
 
   try {
@@ -129,24 +159,24 @@ document.getElementById("ticker").addEventListener("change", async (e) => {
 document.getElementById("holding-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const body = {
-    ticker: document.getElementById("ticker").value,
-    quantity: parseFloat(document.getElementById("quantity").value),
-    purchase_price: parseFloat(document.getElementById("purchase_price").textContent.replace("$", "")),
-  };
-
+  const ticker = document.getElementById("ticker").value;
+  const quantity = parseFloat(document.getElementById("quantity").value);
+  const purchasePrice = parseFloat(document.getElementById("purchase_price").textContent.replace("$", ""));
   const purchaseDate = document.getElementById("purchase_date").value;
-  if (purchaseDate) body.purchase_date = purchaseDate;
 
-  await fetch(`${API_BASE}/holdings`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  if (!ticker || !quantity || !purchasePrice) {
+    return;
+  }
 
-  e.target.reset();
-  document.getElementById("purchase_price").textContent = "-";
-  loadPortfolio();
+  try {
+    await buyStock(ticker, quantity, purchasePrice, purchaseDate);
+    e.target.reset();
+    document.getElementById("purchase_price").textContent = "-";
+    await loadPortfolio();
+  } catch (err) {
+    console.error("Buy failed:", err);
+    alert(err.message);
+  }
 });
 
 document.getElementById("sell-form").addEventListener("submit", async (e) => {
@@ -167,5 +197,7 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   e.target.reset();
   loadPortfolio();
 });
+
+document.getElementById("refresh-data-btn").addEventListener("click", loadPortfolio);
 
 loadPortfolio();
