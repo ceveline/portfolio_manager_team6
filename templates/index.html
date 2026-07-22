@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <title>Portfolio Manager</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
   <header>
@@ -11,6 +12,8 @@
     <div id="portfolio-summary">
       <div id="total-value">Total Value: <strong>$0.00</strong></div>
       <div id="total-shares">Total Shares: <strong>0</strong></div>
+      <div id="total-holdings">Number of Holdings: <strong>0</strong></div>
+      <div id="total-gain-loss">Total Gain/Loss: <strong>$0.00 (0.00%)</strong></div>
     </div>
     <div id="date-time">
       <div id="date">
@@ -66,10 +69,14 @@
             <th>Ticker</th>
             <th>Quantity</th>
             <th>Avg Price</th>
+            <th>Gain/Loss</th>
           </tr>
         </thead>
         <tbody id="consolidated-body"></tbody>
       </table>
+      <div id="portfolio-chart-container">
+        <canvas id="portfolio-pie-chart"></canvas>
+      </div>
     </section>
 
     <section id="history">

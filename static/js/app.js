@@ -1,5 +1,6 @@
 const API_BASE = "/api";
 let holdingsData = [];
+let portfolioPieChart = null;
 
 async function loadPortfolio() {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
@@ -48,29 +49,100 @@ async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
   return response.json();
 }
 
-function loadConsolidated(consolidated) {
+async function loadConsolidated(consolidated) {
   const tbody = document.getElementById("consolidated-body");
   tbody.innerHTML = "";
 
   let totalValue = 0;
   let totalShares = 0;
+  let totalCostBasis = 0;
+  let totalGainLoss = 0;
 
-  consolidated.forEach((item) => {
+  const currentPrices = await Promise.all(
+    consolidated.map(async (item) => {
+      try {
+        const res = await fetch(`${API_BASE}/price/${item.ticker}`);
+        if (res.ok) {
+          const data = await res.json();
+          return data.price;
+        }
+      } catch (err) {
+        console.error("Error fetching price:", err);
+      }
+      return null;
+    })
+  );
+
+  consolidated.forEach((item, i) => {
     const row = document.createElement("tr");
     const itemValue = item.quantity * item.avg_price;
     totalValue += itemValue;
     totalShares += item.quantity;
 
+    const currentPrice = currentPrices[i];
+    const costBasis = item.quantity * item.avg_price;
+    totalCostBasis += costBasis;
+
+    let gainLossCell = "-";
+    if (currentPrice != null) {
+      const gainLoss = (currentPrice - item.avg_price) * item.quantity;
+      const gainLossPct = (gainLoss / costBasis) * 100;
+      totalGainLoss += gainLoss;
+      const sign = gainLoss >= 0 ? "+" : "";
+      gainLossCell = `${sign}$${gainLoss.toFixed(2)} (${sign}${gainLossPct.toFixed(2)}%)`;
+    }
+
     row.innerHTML = `
       <td>${item.ticker}</td>
       <td>${item.quantity}</td>
       <td>$${item.avg_price.toFixed(2)}</td>
+      <td>${gainLossCell}</td>
     `;
     tbody.appendChild(row);
   });
 
   document.querySelector("#total-value strong").textContent = `$${totalValue.toFixed(2)}`;
   document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
+  document.querySelector("#total-holdings strong").textContent = consolidated.length;
+
+  const totalGainLossPct = totalCostBasis ? (totalGainLoss / totalCostBasis) * 100 : 0;
+  const totalSign = totalGainLoss >= 0 ? "+" : "";
+  document.querySelector("#total-gain-loss strong").textContent =
+    `${totalSign}$${totalGainLoss.toFixed(2)} (${totalSign}${totalGainLossPct.toFixed(2)}%)`;
+
+  renderPortfolioPieChart(consolidated);
+}
+
+function renderPortfolioPieChart(consolidated) {
+  const canvas = document.getElementById("portfolio-pie-chart");
+  if (!canvas) return;
+
+  const labels = consolidated.map((item) => item.ticker);
+  const values = consolidated.map((item) => item.quantity * item.avg_price);
+  const colors = [
+    "#4e79a7", "#f28e2b", "#e15759", "#76b7b2",
+    "#59a14f", "#edc948", "#b07aa1", "#ff9da7",
+  ];
+
+  if (portfolioPieChart) {
+    portfolioPieChart.data.labels = labels;
+    portfolioPieChart.data.datasets[0].data = values;
+    portfolioPieChart.update();
+    return;
+  }
+
+  portfolioPieChart = new Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
+    },
+  });
 }
 
 function loadHistory(history) {
@@ -154,10 +226,14 @@ document.getElementById("ticker").addEventListener("change", async (e) => {
     if (res.ok) {
       const data = await res.json();
       priceDisplay.textContent = `$${data.price.toFixed(2)}`;
+    } else {
+      priceDisplay.textContent = "Unavailable";
+      alert(`Could not fetch a price for ${ticker}. Please try again.`);
     }
   } catch (err) {
     console.error("Error fetching price:", err);
-    priceDisplay.textContent = "-";
+    priceDisplay.textContent = "Unavailable";
+    alert(`Could not fetch a price for ${ticker}. Please try again.`);
   }
 });
 

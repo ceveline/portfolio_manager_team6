@@ -49,3 +49,18 @@ button {
 #current-time {
   display: inline-block;
 }
+
+#portfolio-chart-container {
+  max-width: 320px;
+  margin: 1.5rem auto 0;
+}
+
+#ticker,
+#sell-ticker {
+  width: 180px;
+}
+
+#quantity,
+#sell-quantity-input {
+  width: 140px;
+}
