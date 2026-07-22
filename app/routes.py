@@ -248,5 +248,32 @@ def get_consolidated():
     }
 )
 def get_transactions():
-    transactions = Transaction.query.order_by(Transaction.transaction_date.desc()).all()
+    query = Transaction.query
+
+    action = request.args.get("action", "", type=str)
+    ticker = request.args.get("ticker", "", type=str)
+    quantity = request.args.get("quantity", type=float)
+    year_value = request.args.get("year", "", type=str)
+    price = request.args.get("price", type=float)
+
+    if action:
+        query = query.filter(Transaction.action.like(f"%{action.lower()}%"))
+
+    if ticker:
+        query = query.filter(Transaction.ticker.like(f"%{ticker.upper()}%"))
+
+    if quantity is not None:
+        query = query.filter(Transaction.quantity == quantity)
+
+    if year_value:
+        try:
+            year_int = int(year_value)
+            query = query.filter(db.func.extract("year", Transaction.transaction_date) == year_int)
+        except ValueError:
+            pass
+
+    if price is not None:
+        query = query.filter(Transaction.price == price)
+
+    transactions = query.order_by(Transaction.transaction_date.desc()).all()
     return jsonify([t.to_dict() for t in transactions]), 200

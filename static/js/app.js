@@ -1,7 +1,7 @@
 const API_BASE = "/api";
 let holdingsData = [];
 
-async function loadPortfolio() {
+async function loadPortfolio(filterField = "", filterValue = "") {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
@@ -9,7 +9,13 @@ async function loadPortfolio() {
   const consolidatedRes = await fetch(`${API_BASE}/consolidated`);
   const consolidated = await consolidatedRes.json();
 
-  const historyRes = await fetch(`${API_BASE}/transactions`);
+  const params = new URLSearchParams();
+  if (filterField && filterValue) {
+    params.append(filterField, filterValue);
+  }
+
+  const historyUrl = `${API_BASE}/transactions${params.toString() ? `?${params.toString()}` : ""}`;
+  const historyRes = await fetch(historyUrl);
   const history = await historyRes.json();
 
   loadConsolidated(consolidated);
@@ -24,6 +30,14 @@ function getTodayDate() {
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function resetHistoryFilter() {
+  const filterSelect = document.getElementById("history-filter-select");
+  const filterValue = document.getElementById("history-filter-value");
+
+  if (filterSelect) filterSelect.value = "";
+  if (filterValue) filterValue.value = "";
 }
 
 async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
@@ -177,6 +191,7 @@ document.getElementById("holding-form").addEventListener("submit", async (e) => 
     await buyStock(ticker, quantity, purchasePrice, purchaseDate);
     e.target.reset();
     document.getElementById("purchase_price").textContent = "-";
+    resetHistoryFilter();
     await loadPortfolio();
   } catch (err) {
     console.error("Buy failed:", err);
@@ -200,11 +215,30 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   await fetch(url, { method: "DELETE" });
 
   e.target.reset();
+  resetHistoryFilter();
   loadPortfolio();
 });
 
-document.getElementById("refresh-data-btn").addEventListener("click", loadPortfolio);
+document.getElementById("refresh-data-btn").addEventListener("click", () => loadPortfolio());
 
+document.getElementById("history-filter-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const filterField = document.getElementById("history-filter-select").value;
+  const filterValue = document.getElementById("history-filter-value").value.trim();
+
+  if (!filterField || !filterValue) {
+    await loadPortfolio();
+    return;
+  }
+
+  await loadPortfolio(filterField, filterValue);
+});
+
+document.getElementById("clear-filter-btn").addEventListener("click", async () => {
+  resetHistoryFilter();
+  await loadPortfolio();
+});
 
 //Handle date
 document.getElementById("current-date").textContent = getTodayDate();

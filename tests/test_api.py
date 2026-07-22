@@ -51,3 +51,55 @@ def test_sell(client):
 
     res = client.get("/api/portfolio")
     assert res.get_json() == []
+
+
+def test_filter_transactions(client):
+    buy_res = client.post(
+        "/api/holdings",
+        json={
+            "ticker": "AAPL",
+            "quantity": 5,
+            "purchase_price": 100.0,
+            "purchase_date": "2026-07-20",
+        },
+    )
+    assert buy_res.status_code == 201
+
+    sell_res = client.post(
+        "/api/holdings",
+        json={
+            "ticker": "TSLA",
+            "quantity": 3,
+            "purchase_price": 200.0,
+            "purchase_date": "2026-07-21",
+        },
+    )
+    assert sell_res.status_code == 201
+
+    holding_id = sell_res.get_json()["id"]
+    delete_res = client.delete(f"/api/holdings/{holding_id}?quantity=2&sell_date=2026-07-22")
+    assert delete_res.status_code == 204
+
+    buy_filter = client.get("/api/transactions?action=buy")
+    assert buy_filter.status_code == 200
+    assert len(buy_filter.get_json()) == 1
+    assert buy_filter.get_json()[0]["ticker"] == "AAPL"
+
+    ticker_filter = client.get("/api/transactions?ticker=TSLA")
+    assert ticker_filter.status_code == 200
+    assert len(ticker_filter.get_json()) == 1
+    assert ticker_filter.get_json()[0]["action"] == "sell"
+
+    quantity_filter = client.get("/api/transactions?quantity=2")
+    assert quantity_filter.status_code == 200
+    assert len(quantity_filter.get_json()) == 1
+    assert quantity_filter.get_json()[0]["quantity"] == 2
+
+    date_filter = client.get("/api/transactions?date=2026-07-22")
+    assert date_filter.status_code == 200
+    assert len(date_filter.get_json()) == 1
+
+    price_filter = client.get("/api/transactions?price=100")
+    assert price_filter.status_code == 200
+    assert len(price_filter.get_json()) == 1
+    assert price_filter.get_json()[0]["price"] == 100.0

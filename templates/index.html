@@ -71,9 +71,24 @@
         <tbody id="consolidated-body"></tbody>
       </table>
     </section>
-
     <section id="history">
       <h2>Transaction History</h2>
+      <div id="history-filter">
+        <form id="history-filter-form">
+          <label for="history-filter-select">Filter by:</label>
+          <select name="history-filter-select" id="history-filter-select">
+            <option value="">Select a field</option>
+            <option value="action">Action</option>
+            <option value="ticker">Ticker</option>
+            <option value="quantity">Quantity</option>
+            <option value="price">Price</option>
+            <option value="year">Year</option>
+          </select>
+          <input type="text" id="history-filter-value" placeholder="Enter value" />
+          <button type="submit">Done</button>
+          <button type="submit" id="clear-filter-btn">Clear Filter</button>
+        </form>
+      </div>
       <table id="history-table">
         <thead>
           <tr>
