@@ -82,13 +82,13 @@ def test_filter_transactions(client):
 
     buy_filter = client.get("/api/transactions?action=buy")
     assert buy_filter.status_code == 200
-    assert len(buy_filter.get_json()) == 1
-    assert buy_filter.get_json()[0]["ticker"] == "AAPL"
+    assert len(buy_filter.get_json()) == 2
+    assert {item["ticker"] for item in buy_filter.get_json()} == {"AAPL", "TSLA"}
 
     ticker_filter = client.get("/api/transactions?ticker=TSLA")
     assert ticker_filter.status_code == 200
-    assert len(ticker_filter.get_json()) == 1
-    assert ticker_filter.get_json()[0]["action"] == "sell"
+    assert len(ticker_filter.get_json()) == 2
+    assert {item["action"] for item in ticker_filter.get_json()} == {"buy", "sell"}
 
     quantity_filter = client.get("/api/transactions?quantity=2")
     assert quantity_filter.status_code == 200
@@ -103,3 +103,48 @@ def test_filter_transactions(client):
     assert price_filter.status_code == 200
     assert len(price_filter.get_json()) == 1
     assert price_filter.get_json()[0]["price"] == 100.0
+
+
+def test_comparison_and_range_filters(client):
+    client.post(
+        "/api/holdings",
+        json={"ticker": "AAPL", "quantity": 6, "purchase_price": 80.0, "purchase_date": "2026-07-20"},
+    )
+    client.post(
+        "/api/holdings",
+        json={"ticker": "TSLA", "quantity": 4, "purchase_price": 120.0, "purchase_date": "2026-07-21"},
+    )
+    client.post(
+        "/api/holdings",
+        json={"ticker": "MSFT", "quantity": 2, "purchase_price": 300.0, "purchase_date": "2026-07-22"},
+    )
+
+    quantity_filter = client.get("/api/transactions?quantity=>=4")
+    assert quantity_filter.status_code == 200
+    assert len(quantity_filter.get_json()) == 2
+
+    price_filter = client.get("/api/transactions?price=>=100")
+    assert price_filter.status_code == 200
+    assert len(price_filter.get_json()) == 2
+
+    range_filter = client.get("/api/transactions?price_range=100-500")
+    assert range_filter.status_code == 200
+    assert len(range_filter.get_json()) == 2
+
+
+def test_consolidated_avg_price_is_weighted_by_quantity(client):
+    client.post(
+        "/api/holdings",
+        json={"ticker": "AAPL", "quantity": 1, "purchase_price": 100.0, "purchase_date": "2026-07-20"},
+    )
+    client.post(
+        "/api/holdings",
+        json={"ticker": "AAPL", "quantity": 3, "purchase_price": 200.0, "purchase_date": "2026-07-21"},
+    )
+
+    res = client.get("/api/consolidated")
+    assert res.status_code == 200
+    payload = res.get_json()
+    assert len(payload) == 1
+    assert payload[0]["ticker"] == "AAPL"
+    assert payload[0]["avg_price"] == 175.0

@@ -1,7 +1,7 @@
 const API_BASE = "/api";
 let holdingsData = [];
 
-async function loadPortfolio(filterField = "", filterValue = "") {
+async function loadPortfolio(filters = {}) {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
@@ -10,9 +10,11 @@ async function loadPortfolio(filterField = "", filterValue = "") {
   const consolidated = await consolidatedRes.json();
 
   const params = new URLSearchParams();
-  if (filterField && filterValue) {
-    params.append(filterField, filterValue);
-  }
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== "" && value !== null && value !== undefined) {
+      params.append(key, value);
+    }
+  });
 
   const historyUrl = `${API_BASE}/transactions${params.toString() ? `?${params.toString()}` : ""}`;
   const historyRes = await fetch(historyUrl);
@@ -33,11 +35,14 @@ function getTodayDate() {
 }
 
 function resetHistoryFilter() {
-  const filterSelect = document.getElementById("history-filter-select");
-  const filterValue = document.getElementById("history-filter-value");
-
-  if (filterSelect) filterSelect.value = "";
-  if (filterValue) filterValue.value = "";
+  document.getElementById("history-filter-action").value = "";
+  document.getElementById("history-filter-ticker").value = "";
+  document.getElementById("history-filter-quantity-operator").value = "";
+  document.getElementById("history-filter-quantity").value = "";
+  document.getElementById("history-filter-price-operator").value = "";
+  document.getElementById("history-filter-price").value = "";
+  document.getElementById("history-filter-price-range").value = "";
+  document.getElementById("history-filter-year").value = "";
 }
 
 async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
@@ -69,6 +74,13 @@ function loadConsolidated(consolidated) {
   let totalValue = 0;
   let totalShares = 0;
 
+  if (!consolidated.length) {
+    tbody.innerHTML = '<tr class="empty-state"><td colspan="3">No portfolio data yet.</td></tr>';
+    document.querySelector("#total-value strong").textContent = "$0.00";
+    document.querySelector("#total-shares strong").textContent = "0";
+    return;
+  }
+
   consolidated.forEach((item) => {
     const row = document.createElement("tr");
     const itemValue = item.quantity * item.avg_price;
@@ -90,6 +102,11 @@ function loadConsolidated(consolidated) {
 function loadHistory(history) {
   const tbody = document.getElementById("history-body");
   tbody.innerHTML = "";
+
+  if (!history.length) {
+    tbody.innerHTML = '<tr class="empty-state"><td colspan="5">No transaction history yet.</td></tr>';
+    return;
+  }
 
   history.forEach((t) => {
     const row = document.createElement("tr");
@@ -117,6 +134,21 @@ function populateSellDropdown(holdings) {
   });
 }
 
+function getPortfolioAvgPrice(ticker, holdings = holdingsData) {
+  const matchingHoldings = holdings.filter((holding) => holding.ticker === ticker);
+  if (!matchingHoldings.length) {
+    return 0;
+  }
+
+  const totalQuantity = matchingHoldings.reduce((sum, holding) => sum + Number(holding.quantity || 0), 0);
+  const weightedCost = matchingHoldings.reduce(
+    (sum, holding) => sum + Number(holding.quantity || 0) * Number(holding.purchase_price || 0),
+    0,
+  );
+
+  return totalQuantity ? weightedCost / totalQuantity : 0;
+}
+
 function clearSellDetails() {
   const sellQuantityEl = document.getElementById("sell-quantity");
   const sellPriceEl = document.getElementById("sell-price");
@@ -142,16 +174,8 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
 
   document.getElementById("sell-quantity-input").value = "";
 
-  try {
-    const res = await fetch(`${API_BASE}/price/${holding.ticker}`);
-    if (res.ok) {
-      const data = await res.json();
-      document.getElementById("sell-price").textContent = `$${data.price.toFixed(2)}`;
-    }
-  } catch (err) {
-    console.error("Error fetching price:", err);
-    document.getElementById("sell-price").textContent = "-";
-  }
+  const averagePrice = getPortfolioAvgPrice(holding.ticker, holdingsData);
+  document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
 });
 
 document.getElementById("ticker").addEventListener("change", async (e) => {
@@ -220,19 +244,35 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
 });
 
 document.getElementById("refresh-data-btn").addEventListener("click", () => loadPortfolio());
-
 document.getElementById("history-filter-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const filterField = document.getElementById("history-filter-select").value;
-  const filterValue = document.getElementById("history-filter-value").value.trim();
+  const filters = {};
+  const action = document.getElementById("history-filter-action").value.trim();
+  const ticker = document.getElementById("history-filter-ticker").value.trim();
+  const quantityOperator = document.getElementById("history-filter-quantity-operator").value;
+  const quantityValue = document.getElementById("history-filter-quantity").value.trim();
+  const priceOperator = document.getElementById("history-filter-price-operator").value;
+  const priceValue = document.getElementById("history-filter-price").value.trim();
+  const priceRange = document.getElementById("history-filter-price-range").value;
+  const year = document.getElementById("history-filter-year").value.trim();
 
-  if (!filterField || !filterValue) {
+  if (action) filters.action = action;
+  if (ticker) filters.ticker = ticker;
+  if (quantityOperator && quantityValue) filters.quantity = `${quantityOperator}${quantityValue}`;
+  if (priceOperator && priceValue) {
+    const normalizedPrice = Number(priceValue).toString();
+    filters.price = `${priceOperator}${normalizedPrice}`;
+  }
+  if (priceRange) filters.price_range = priceRange;
+  if (year) filters.year = year;
+
+  if (Object.keys(filters).length === 0) {
     await loadPortfolio();
     return;
   }
 
-  await loadPortfolio(filterField, filterValue);
+  await loadPortfolio(filters);
 });
 
 document.getElementById("clear-filter-btn").addEventListener("click", async () => {
@@ -240,6 +280,11 @@ document.getElementById("clear-filter-btn").addEventListener("click", async () =
   await loadPortfolio();
 });
 
-//Handle date
-document.getElementById("current-date").textContent = getTodayDate();
-loadPortfolio();
+// Handle date and load data as soon as the page is ready
+window.addEventListener("DOMContentLoaded", () => {
+  const currentDateEl = document.getElementById("current-date");
+  if (currentDateEl) {
+    currentDateEl.textContent = getTodayDate();
+  }
+  loadPortfolio();
+});
