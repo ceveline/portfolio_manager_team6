@@ -10,6 +10,21 @@ from app.models import Holding, Transaction
 api = Blueprint("api", __name__, url_prefix="/api")
 
 
+def _parse_operator_value(raw_value):
+    if raw_value is None:
+        return "=", None
+
+    value = str(raw_value).strip()
+    if not value:
+        return "=", None
+
+    for operator in (">=", "<=", ">", "<", "="):
+        if value.startswith(operator):
+            return operator, value[len(operator):]
+
+    return "=", value
+
+
 @api.route("/price/<ticker>", methods=["GET"])
 @swag_from(
     {
@@ -69,6 +84,12 @@ def get_stock_price(ticker):
     }
 )
 def list_holdings():
+    holdings = Holding.query.all()
+    return jsonify([h.to_dict() for h in holdings]), 200
+
+
+@api.route("/portfolio", methods=["GET"])
+def get_portfolio():
     holdings = Holding.query.all()
     return jsonify([h.to_dict() for h in holdings]), 200
 
@@ -226,17 +247,21 @@ def get_consolidated():
     consolidated = db.session.query(
         Holding.ticker,
         func.sum(Holding.quantity).label("total_quantity"),
-        func.avg(Holding.purchase_price).label("avg_price"),
+        func.sum(Holding.quantity * Holding.purchase_price).label("weighted_cost"),
     ).group_by(Holding.ticker).all()
 
-    return jsonify([
-        {
-            "ticker": row[0],
-            "quantity": float(row[1]),
-            "avg_price": float(row[2]) if row[2] else 0,
-        }
-        for row in consolidated
-    ]), 200
+    payload = []
+    for ticker, total_quantity, weighted_cost in consolidated:
+        avg_price = float(weighted_cost / total_quantity) if total_quantity else 0
+        payload.append(
+            {
+                "ticker": ticker,
+                "quantity": float(total_quantity),
+                "avg_price": avg_price,
+            }
+        )
+
+    return jsonify(payload), 200
 
 
 @api.route("/transactions", methods=["GET"])
@@ -248,5 +273,81 @@ def get_consolidated():
     }
 )
 def get_transactions():
-    transactions = Transaction.query.order_by(Transaction.transaction_date.desc()).all()
+    query = Transaction.query
+
+    action = request.args.get("action", "", type=str)
+    ticker = request.args.get("ticker", "", type=str)
+    quantity_value = request.args.get("quantity", type=str)
+    year_value = request.args.get("year", "", type=str)
+    price_value = request.args.get("price", type=str)
+    price_range = request.args.get("price_range", "", type=str)
+    date_value = request.args.get("date", "", type=str)
+
+    if action:
+        query = query.filter(Transaction.action.like(f"%{action.lower()}%"))
+
+    if ticker:
+        query = query.filter(Transaction.ticker.like(f"%{ticker.upper()}%"))
+
+    if quantity_value:
+        try:
+            quantity_operator, quantity_text = _parse_operator_value(quantity_value)
+            quantity_number = float(quantity_text)
+            if quantity_operator == "<":
+                query = query.filter(Transaction.quantity < quantity_number)
+            elif quantity_operator == ">":
+                query = query.filter(Transaction.quantity > quantity_number)
+            elif quantity_operator == "<=":
+                query = query.filter(Transaction.quantity <= quantity_number)
+            elif quantity_operator == ">=":
+                query = query.filter(Transaction.quantity >= quantity_number)
+            else:
+                query = query.filter(Transaction.quantity == quantity_number)
+        except ValueError:
+            pass
+
+    if year_value:
+        try:
+            year_int = int(year_value)
+            query = query.filter(db.func.extract("year", Transaction.transaction_date) == year_int)
+        except ValueError:
+            pass
+
+    if price_value:
+        try:
+            price_operator, price_text = _parse_operator_value(price_value)
+            price_number = float(price_text)
+            if price_operator == "<":
+                query = query.filter(Transaction.price < price_number)
+            elif price_operator == ">":
+                query = query.filter(Transaction.price > price_number)
+            elif price_operator == "<=":
+                query = query.filter(Transaction.price <= price_number)
+            elif price_operator == ">=":
+                query = query.filter(Transaction.price >= price_number)
+            else:
+                query = query.filter(Transaction.price == price_number)
+        except ValueError:
+            pass
+
+    if date_value:
+        try:
+            parsed_date = datetime.strptime(date_value, "%Y-%m-%d").date()
+            query = query.filter(Transaction.transaction_date == parsed_date)
+        except ValueError:
+            pass
+
+    if price_range:
+        if price_range == "0-50":
+            query = query.filter(Transaction.price >= 0, Transaction.price <= 50)
+        elif price_range == "50-100":
+            query = query.filter(Transaction.price > 50, Transaction.price <= 100)
+        elif price_range == "100-500":
+            query = query.filter(Transaction.price > 100, Transaction.price <= 500)
+        elif price_range == "500-1000":
+            query = query.filter(Transaction.price > 500, Transaction.price <= 1000)
+        elif price_range == "1000+":
+            query = query.filter(Transaction.price > 1000)
+
+    transactions = query.order_by(Transaction.transaction_date.desc()).all()
     return jsonify([t.to_dict() for t in transactions]), 200

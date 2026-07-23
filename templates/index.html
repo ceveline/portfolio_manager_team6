@@ -68,12 +68,62 @@
             <th>Avg Price</th>
           </tr>
         </thead>
-        <tbody id="consolidated-body"></tbody>
+        <tbody id="consolidated-body">
+          <tr class="empty-state">
+            <td colspan="3">No portfolio data yet.</td>
+          </tr>
+        </tbody>
       </table>
     </section>
-
     <section id="history">
       <h2>Transaction History</h2>
+      <div id="history-filter">
+        <form id="history-filter-form">
+          <label for="history-filter-action">Action</label>
+          <input type="text" id="history-filter-action" placeholder="buy or sell" />
+
+          <label for="history-filter-ticker">Ticker</label>
+          <input type="text" id="history-filter-ticker" placeholder="AAPL" />
+
+          <label for="history-filter-quantity">Quantity</label>
+          <select id="history-filter-quantity-operator">
+            <option value="">Any</option>
+            <option value="=">=</option>
+            <option value=">">&gt;</option>
+            <option value=">=">&gt;=</option>
+            <option value="<">&lt;</option>
+            <option value="<=">&lt;=</option>
+          </select>
+          <input type="number" id="history-filter-quantity" step="any" placeholder="Qty" />
+
+          <label for="history-filter-price">Price</label>
+          <select id="history-filter-price-operator">
+            <option value="">Any</option>
+            <option value="=">=</option>
+            <option value=">">&gt;</option>
+            <option value=">=">&gt;=</option>
+            <option value="<">&lt;</option>
+            <option value="<=">&lt;=</option>
+          </select>
+          <input type="text" id="history-filter-price" inputmode="decimal" pattern="^[0-9]+(?:\\.[0-9]+)?$" placeholder="300" />
+
+          <label for="history-filter-price-range">Price Range</label>
+          <select id="history-filter-price-range">
+            <option value="">All</option>
+            <option value="0-50">$0–$50</option>
+            <option value="50-100">$50–$100</option>
+            <option value="100-500">$100–$500</option>
+            <option value="500-1000">$500–$1000</option>
+            <option value="1000+">$1000+</option>
+          </select>
+
+          <label for="history-filter-year">Year</label>
+          <input type="number" id="history-filter-year" placeholder="2026" />
+
+          <button type="submit">Apply</button>
+          <button type="button" id="clear-filter-btn">Clear</button>
+        </form>
+      </div>
       <table id="history-table">
         <thead>
           <tr>
@@ -84,7 +134,11 @@
             <th>Date</th>
           </tr>
         </thead>
-        <tbody id="history-body"></tbody>
+        <tbody id="history-body">
+          <tr class="empty-state">
+            <td colspan="5">No transaction history yet.</td>
+          </tr>
+        </tbody>
       </table>
     </section>
   </main>

@@ -49,3 +49,9 @@ button {
 #current-time {
   display: inline-block;
 }
+
+.empty-state {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
