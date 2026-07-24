@@ -1,13 +1,21 @@
-from datetime import datetime
+from datetime import date, datetime, timedelta
 
+from curl_cffi import requests as curl_requests
 from flasgger import swag_from
 from flask import Blueprint, jsonify, request
 import yfinance as yf
 
-from app import db
-from app.models import Holding, Transaction
+from app import db, performance, price_backfill
+from app.models import Holding, PriceHistory, Transaction
 
 api = Blueprint("api", __name__, url_prefix="/api")
+
+# Yahoo Finance blocks plain requests-library traffic from most cloud/CI
+# IPs (returns empty body -> yfinance raises "Expecting value: line 1
+# column 1 (char 0)" / "possibly delisted"). Giving yfinance a session
+# that impersonates a real browser's TLS fingerprint fixes this - it's
+# not about the ticker being invalid, real tickers get the same error.
+_yf_session = curl_requests.Session(impersonate="chrome")
 
 
 def _parse_operator_value(raw_value):
@@ -25,6 +33,47 @@ def _parse_operator_value(raw_value):
     return "=", value
 
 
+def _fetch_current_price(ticker):
+    """Best-effort live price lookup: AWS cached API first, yfinance as
+    fallback. Returns a float, or None if both sources fail. Shared by
+    the /price endpoint and the /summary performance endpoint so there's
+    one place that knows how to get "the price right now".
+    """
+    import requests
+
+    ticker_upper = ticker.upper()
+
+    # Try AWS cached price API first
+    try:
+        aws_url = f"https://c4rm9elh30.execute-api.us-east-1.amazonaws.com/default/cachedPriceData?ticker={ticker_upper}"
+        response = requests.get(aws_url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if isinstance(data, dict):
+                if "price" in data and data["price"] is not None:
+                    return float(data["price"])
+
+                price_data = data.get("price_data") or {}
+                close_prices = price_data.get("close") or []
+                if close_prices:
+                    return float(close_prices[-1])
+    except Exception:
+        pass
+
+    # Fall back to yfinance (see _yf_session comment above for why a
+    # plain yf.Ticker() call tends to fail for any ticker, not just
+    # obscure ones)
+    try:
+        stock = yf.Ticker(ticker_upper, session=_yf_session)
+        hist = stock.history(period="1d")
+        if len(hist) > 0:
+            return float(hist["Close"].iloc[-1])
+    except Exception:
+        pass
+
+    return None
+
+
 @api.route("/price/<ticker>", methods=["GET"])
 @swag_from(
     {
@@ -40,51 +89,10 @@ def _parse_operator_value(raw_value):
     }
 )
 def get_stock_price(ticker):
-    import requests
-
-    ticker_upper = ticker.upper()
-
-    fallback_prices = {
-        "AAPL": 192.34,
-        "GOOGL": 176.89,
-        "MSFT": 424.15,
-        "TSLA": 248.12,
-        "META": 511.44,
-        "AMZN": 185.23,
-        "NVDA": 120.06,
-        "SPY": 567.91,
-    }
-
-    try:
-        aws_url = f"https://c4rm9elh30.execute-api.us-east-1.amazonaws.com/default/cachedPriceData?ticker={ticker_upper}"
-        response = requests.get(aws_url, timeout=8)
-        if response.status_code == 200:
-            data = response.json()
-            if isinstance(data, dict):
-                if "price" in data and data["price"] is not None:
-                    return jsonify({"ticker": ticker_upper, "price": data["price"]}), 200
-
-                price_data = data.get("price_data") or {}
-                close_prices = price_data.get("close") or []
-                if close_prices:
-                    price = float(close_prices[-1])
-                    return jsonify({"ticker": ticker_upper, "price": price}), 200
-    except Exception:
-        pass
-
-    try:
-        stock = yf.Ticker(ticker_upper)
-        hist = stock.history(period="1d")
-        if len(hist) > 0 and "Close" in hist.columns:
-            price = float(hist["Close"].iloc[-1])
-            return jsonify({"ticker": ticker_upper, "price": price}), 200
-    except Exception:
-        pass
-
-    if ticker_upper in fallback_prices:
-        return jsonify({"ticker": ticker_upper, "price": fallback_prices[ticker_upper]}), 200
-
-    return jsonify({"error": f"Could not fetch price for {ticker}"}), 400
+    price = _fetch_current_price(ticker)
+    if price is None:
+        return jsonify({"error": f"Could not fetch price for {ticker}"}), 400
+    return jsonify({"ticker": ticker.upper(), "price": price}), 200
 
 
 @api.route("/holdings", methods=["GET"])
@@ -96,12 +104,6 @@ def get_stock_price(ticker):
     }
 )
 def list_holdings():
-    holdings = Holding.query.all()
-    return jsonify([h.to_dict() for h in holdings]), 200
-
-
-@api.route("/portfolio", methods=["GET"])
-def get_portfolio():
     holdings = Holding.query.all()
     return jsonify([h.to_dict() for h in holdings]), 200
 
@@ -259,21 +261,17 @@ def get_consolidated():
     consolidated = db.session.query(
         Holding.ticker,
         func.sum(Holding.quantity).label("total_quantity"),
-        func.sum(Holding.quantity * Holding.purchase_price).label("weighted_cost"),
+        func.avg(Holding.purchase_price).label("avg_price"),
     ).group_by(Holding.ticker).all()
 
-    payload = []
-    for ticker, total_quantity, weighted_cost in consolidated:
-        avg_price = float(weighted_cost / total_quantity) if total_quantity else 0
-        payload.append(
-            {
-                "ticker": ticker,
-                "quantity": float(total_quantity),
-                "avg_price": avg_price,
-            }
-        )
-
-    return jsonify(payload), 200
+    return jsonify([
+        {
+            "ticker": row[0],
+            "quantity": float(row[1]),
+            "avg_price": float(row[2]) if row[2] else 0,
+        }
+        for row in consolidated
+    ]), 200
 
 
 @api.route("/transactions", methods=["GET"])
@@ -363,3 +361,152 @@ def get_transactions():
 
     transactions = query.order_by(Transaction.transaction_date.desc()).all()
     return jsonify([t.to_dict() for t in transactions]), 200
+
+
+@api.route("/price-history", methods=["GET"])
+@swag_from(
+    {
+        "tags": ["Stock Data"],
+        "summary": "Get stored historical daily closes (backfilled from yfinance via /price-history/backfill)",
+        "parameters": [
+            {
+                "name": "ticker",
+                "in": "query",
+                "type": "string",
+                "required": False,
+                "description": "Filter to one ticker; omit for every ticker with stored history",
+            },
+            {"name": "start", "in": "query", "type": "string", "required": False, "example": "2026-01-01"},
+            {"name": "end", "in": "query", "type": "string", "required": False, "example": "2026-07-23"},
+        ],
+        "responses": {200: {"description": "List of {ticker, date, close_price} rows, most recent first"}},
+    }
+)
+def get_price_history():
+    query = PriceHistory.query
+
+    ticker = request.args.get("ticker")
+    if ticker:
+        query = query.filter(PriceHistory.ticker == ticker.upper())
+
+    start_str = request.args.get("start")
+    if start_str:
+        query = query.filter(
+            PriceHistory.price_date >= datetime.strptime(start_str, "%Y-%m-%d").date()
+        )
+
+    end_str = request.args.get("end")
+    if end_str:
+        query = query.filter(
+            PriceHistory.price_date <= datetime.strptime(end_str, "%Y-%m-%d").date()
+        )
+
+    rows = query.order_by(PriceHistory.ticker.asc(), PriceHistory.price_date.desc()).all()
+    return jsonify([r.to_dict() for r in rows]), 200
+
+
+@api.route("/price-history/backfill", methods=["POST"])
+@swag_from(
+    {
+        "tags": ["Stock Data"],
+        "summary": "Backfill historical daily prices from yfinance (past data only - not live prices)",
+        "parameters": [
+            {
+                "name": "body",
+                "in": "body",
+                "required": False,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "tickers": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                            "description": "Defaults to every ticker with a transaction",
+                        },
+                        "start": {"type": "string", "example": "2026-01-01"},
+                        "end": {"type": "string", "example": "2026-07-23"},
+                    },
+                },
+            }
+        ],
+        "responses": {
+            200: {"description": "Backfill result per ticker"},
+            400: {"description": "No tickers to backfill"},
+        },
+    }
+)
+def backfill_price_history():
+    data = request.get_json(silent=True) or {}
+
+    tickers = data.get("tickers") or performance.all_tickers()
+    if not tickers:
+        return jsonify({"error": "no tickers to backfill (no transactions yet)"}), 400
+
+    start_date = (
+        datetime.strptime(data["start"], "%Y-%m-%d").date() if data.get("start") else None
+    )
+    end_date = (
+        datetime.strptime(data["end"], "%Y-%m-%d").date() if data.get("end") else None
+    )
+
+    result = price_backfill.backfill_all(tickers, start_date, end_date)
+    return jsonify(result), 200
+
+
+@api.route("/summary", methods=["GET"])
+@swag_from(
+    {
+        "tags": ["Portfolio"],
+        "summary": "Portfolio summary: cost basis, market value, realized/unrealized P&L per ticker and total",
+        "responses": {200: {"description": "Portfolio summary"}},
+    }
+)
+def get_summary():
+    tickers = performance.all_tickers()
+    current_prices = {t: _fetch_current_price(t) for t in tickers}
+    return jsonify(performance.portfolio_summary(current_prices)), 200
+
+
+@api.route("/performance", methods=["GET"])
+@swag_from(
+    {
+        "tags": ["Portfolio"],
+        "summary": "Daily portfolio value over time, for charting performance",
+        "parameters": [
+            {
+                "name": "start",
+                "in": "query",
+                "type": "string",
+                "required": False,
+                "description": "YYYY-MM-DD, defaults to 90 days before end",
+            },
+            {
+                "name": "end",
+                "in": "query",
+                "type": "string",
+                "required": False,
+                "description": "YYYY-MM-DD, defaults to today",
+            },
+        ],
+        "responses": {
+            200: {"description": "Time series of {date, value}"},
+            400: {"description": "Invalid date range"},
+        },
+    }
+)
+def get_performance():
+    end_str = request.args.get("end")
+    start_str = request.args.get("start")
+
+    end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else date.today()
+    start_date = (
+        datetime.strptime(start_str, "%Y-%m-%d").date()
+        if start_str
+        else end_date - timedelta(days=90)
+    )
+
+    if start_date > end_date:
+        return jsonify({"error": "start date must be before end date"}), 400
+
+    series = performance.portfolio_value_series(start_date, end_date)
+    return jsonify(series), 200

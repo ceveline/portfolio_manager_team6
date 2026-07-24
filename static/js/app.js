@@ -1,14 +1,12 @@
 const API_BASE = "/api";
 let holdingsData = [];
 let portfolioPieChart = null;
+let performanceChart = null;
 
 async function loadPortfolio(filters = {}) {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
-
-  const consolidatedRes = await fetch(`${API_BASE}/consolidated`);
-  const consolidated = await consolidatedRes.json();
 
   const params = new URLSearchParams();
   Object.entries(filters).forEach(([key, value]) => {
@@ -21,7 +19,7 @@ async function loadPortfolio(filters = {}) {
   const historyRes = await fetch(historyUrl);
   const history = await historyRes.json();
 
-  await loadConsolidated(consolidated);
+  await loadPortfolioWithSummary();
   loadHistory(history);
   populateSellDropdown(holdings);
   clearSellDetails();
@@ -125,157 +123,73 @@ async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
   return response.json();
 }
 
-async function loadConsolidated(consolidated) {
-  const tbody = document.getElementById("consolidated-body");
-  tbody.innerHTML = "";
+async function loadPortfolioWithSummary() {
+  try {
+    const res = await fetch(`${API_BASE}/summary`);
+    if (!res.ok) throw new Error("Failed to load summary");
+    const summary = await res.json();
 
-  let totalValue = 0;
-  let totalShares = 0;
-  let totalCostBasis = 0;
-  let totalGainLoss = 0;
+    const tbody = document.getElementById("consolidated-body");
+    tbody.innerHTML = "";
 
-  const currentPrices = await Promise.all(
-    consolidated.map(async (item) => {
-      try {
-        const res = await fetch(`${API_BASE}/price/${item.ticker}`);
+    document.querySelector("#portfolio-cost-basis").textContent = `$${summary.total_cost_basis.toFixed(2)}`;
+    document.querySelector("#portfolio-market-value").textContent = `$${summary.total_market_value.toFixed(2)}`;
+    document.querySelector("#portfolio-unrealized-pnl").textContent = `$${summary.total_unrealized_pnl.toFixed(2)}`;
+    document.querySelector("#portfolio-total-return").textContent = `${summary.total_return_pct.toFixed(2)}%`;
 
-        if (res.ok) {
-          const data = await res.json();
-          const priceValue =
-            data.price ??
-            data.price_data?.close ??
-            data.close;
+    document.querySelector("#total-value strong").textContent = `$${summary.total_market_value.toFixed(2)}`;
+    document.querySelector("#total-holdings strong").textContent = summary.positions.length;
 
-          return Number(priceValue || 0);
-        }
-      } catch (err) {
-        console.error("Error fetching price:", err);
-      }
+    let totalShares = 0;
+    summary.positions.forEach(pos => {
+      totalShares += pos.shares_held;
+    });
+    document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
 
-      return null;
-    })
-  );
-
-
-  if (!consolidated.length) {
-    tbody.innerHTML =
-      '<tr class="empty-state"><td colspan="5">No portfolio data yet.</td></tr>';
-
-    document.querySelector("#total-value strong").textContent = "$0.00";
-    document.querySelector("#total-shares strong").textContent = "0";
-    document.querySelector("#total-holdings strong").textContent = "0";
+    const sign = summary.total_unrealized_pnl >= 0 ? "+" : "";
     document.querySelector("#total-gain-loss strong").textContent =
-      "$0.00 (0.00%)";
+      `${sign}$${summary.total_unrealized_pnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
 
-    return;
-  }
-
-
-  consolidated.forEach((item, index) => {
-
-    const row = document.createElement("tr");
-
-    const avgPrice = Number(item.avg_price || 0);
-    const quantity = Number(item.quantity || 0);
-
-    const itemValue = quantity * avgPrice;
-    const costBasis = itemValue;
-
-    const currentPrice = currentPrices[index];
-
-
-    totalValue += itemValue;
-    totalShares += quantity;
-    totalCostBasis += costBasis;
-
-
-    let gainLossCell = "-";
-
-    if (currentPrice != null) {
-
-      const gainLoss =
-        (currentPrice - avgPrice) * quantity;
-
-      const gainLossPct =
-        costBasis ? (gainLoss / costBasis) * 100 : 0;
-
-
-      totalGainLoss += gainLoss;
-
-
-      const sign = gainLoss >= 0 ? "+" : "";
-
-
-      gainLossCell =
-        `${sign}$${gainLoss.toFixed(2)}
-        (${sign}${gainLossPct.toFixed(2)}%)`;
+    if (!summary.positions || summary.positions.length === 0) {
+      tbody.innerHTML = '<tr class="empty-state"><td colspan="8">No portfolio data yet.</td></tr>';
+      renderPortfolioPieChart([]);
+      return;
     }
 
+    summary.positions.forEach((pos) => {
+      const row = document.createElement("tr");
+      const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
+      const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
+      const currentPriceStr = pos.current_price !== null ? `$${pos.current_price.toFixed(2)}` : "-";
 
-    row.innerHTML = `
-      <td>${item.ticker}</td>
-      <td>${quantity}</td>
-      <td>$${avgPrice.toFixed(2)}</td>
-      <td>$${itemValue.toFixed(2)}</td>
-      <td>${gainLossCell}</td>
-    `;
+      row.innerHTML = `
+        <td>${pos.ticker}</td>
+        <td>${pos.shares_held}</td>
+        <td>$${pos.avg_cost.toFixed(2)}</td>
+        <td>${currentPriceStr}</td>
+        <td>$${pos.cost_basis.toFixed(2)}</td>
+        <td>${marketValueStr}</td>
+        <td>${unrealizedPnlStr}</td>
+        <td>$${pos.realized_pnl.toFixed(2)}</td>
+      `;
+      tbody.appendChild(row);
+    });
 
-
-    tbody.appendChild(row);
-
-  });
-
-
-  document.querySelector("#total-value strong").textContent =
-    `$${totalValue.toFixed(2)}`;
-
-  document.querySelector("#total-shares strong").textContent =
-    totalShares.toFixed(0);
-
-  document.querySelector("#total-holdings strong").textContent =
-    consolidated.length;
-
-
-  const totalGainLossPct =
-    totalCostBasis
-      ? (totalGainLoss / totalCostBasis) * 100
-      : 0;
-
-
-  const sign =
-    totalGainLoss >= 0 ? "+" : "";
-
-
-  document.querySelector("#total-gain-loss strong").textContent =
-    `${sign}$${totalGainLoss.toFixed(2)}
-    (${sign}${totalGainLossPct.toFixed(2)}%)`;
-
-
-  renderPortfolioPieChart(consolidated);
+    renderPortfolioPieChart(summary.positions);
+  } catch (err) {
+    console.error("Error loading portfolio summary:", err);
+  }
 }
 
-function renderPortfolioPieChart(consolidated) {
+function renderPortfolioPieChart(positions) {
+  const canvas = document.getElementById("portfolio-pie-chart");
 
-  const canvas = document.getElementById(
-    "portfolio-pie-chart"
-  );
-
-  if (!canvas || typeof Chart === "undefined") {
+  if (!canvas || typeof Chart === "undefined" || !positions || positions.length === 0) {
     return;
   }
 
-
-  const labels = consolidated.map(
-    item => item.ticker
-  );
-
-
-  const values = consolidated.map(
-    item =>
-      Number(item.quantity || 0) *
-      Number(item.avg_price || 0)
-  );
-
+  const labels = positions.map(pos => pos.ticker);
+  const values = positions.map(pos => pos.market_value !== null ? pos.market_value : 0);
 
   const colors = [
     "#4e79a7",
@@ -288,21 +202,15 @@ function renderPortfolioPieChart(consolidated) {
     "#ff9da7"
   ];
 
-
   if (portfolioPieChart) {
-
     portfolioPieChart.data.labels = labels;
     portfolioPieChart.data.datasets[0].data = values;
     portfolioPieChart.update();
-
     return;
   }
 
-
   portfolioPieChart = new Chart(canvas, {
-
     type: "doughnut",
-
     data: {
       labels,
       datasets: [
@@ -312,15 +220,12 @@ function renderPortfolioPieChart(consolidated) {
         }
       ]
     },
-
     options: {
-      responsive:true,
-      maintainAspectRatio:true,
-      aspectRatio:1
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1
     }
-
   });
-
 }
 
 function loadHistory(history) {
@@ -517,11 +422,217 @@ if (clearFilterButton) {
   });
 }
 
+function getDateRangeForPeriod(period) {
+  const end = new Date();
+  const start = new Date();
+
+  const formatDate = (date) => date.toISOString().split("T")[0];
+
+  switch (period) {
+    case "1m":
+      start.setMonth(start.getMonth() - 1);
+      break;
+    case "3m":
+      start.setMonth(start.getMonth() - 3);
+      break;
+    case "6m":
+      start.setMonth(start.getMonth() - 6);
+      break;
+    case "1y":
+      start.setFullYear(start.getFullYear() - 1);
+      break;
+    case "ytd":
+      start.setFullYear(end.getFullYear(), 0, 1);
+      break;
+    case "5y":
+      start.setFullYear(start.getFullYear() - 5);
+      break;
+    case "10y":
+      start.setFullYear(start.getFullYear() - 10);
+      break;
+    case "all":
+      start.setFullYear(1900);
+      break;
+  }
+
+  return { start: formatDate(start), end: formatDate(end) };
+}
+
+async function loadPerformanceChart(startDate, endDate) {
+  try {
+    const params = new URLSearchParams();
+    if (startDate) params.append("start", startDate);
+    if (endDate) params.append("end", endDate);
+
+    const url = `${API_BASE}/performance${params.toString() ? `?${params.toString()}` : ""}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to load performance");
+    const data = await res.json();
+
+    const dates = data.map(d => d.date);
+    const values = data.map(d => d.value);
+
+    const canvas = document.getElementById("performance-chart");
+    if (!canvas || typeof Chart === "undefined") return;
+
+    if (performanceChart) {
+      performanceChart.data.labels = dates;
+      performanceChart.data.datasets[0].data = values;
+      performanceChart.options.plugins.tooltip.callbacks.label = (context) =>
+        `Portfolio Value: $${context.parsed.y.toFixed(2)}`;
+      performanceChart.update();
+      return;
+    }
+
+    let hoveredX = null;
+
+    const verticalLinePlugin = {
+      id: "verticalLine",
+      afterDatasetsDraw(chart) {
+        if (hoveredX !== null) {
+          const ctx = chart.ctx;
+          const yTop = chart.chartArea.top;
+          const yBottom = chart.chartArea.bottom;
+
+          ctx.save();
+          ctx.strokeStyle = "#4e79a7";
+          ctx.lineWidth = 2;
+          ctx.setLineDash([5, 5]);
+          ctx.beginPath();
+          ctx.moveTo(hoveredX, yTop);
+          ctx.lineTo(hoveredX, yBottom);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    };
+
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (
+        x >= performanceChart.chartArea.left &&
+        x <= performanceChart.chartArea.right &&
+        y >= performanceChart.chartArea.top &&
+        y <= performanceChart.chartArea.bottom
+      ) {
+        hoveredX = x;
+        performanceChart.draw();
+      }
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      hoveredX = null;
+      performanceChart.draw();
+    });
+
+    performanceChart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: dates,
+        datasets: [
+          {
+            label: "Portfolio Value",
+            data: values,
+            borderColor: "#4e79a7",
+            backgroundColor: "rgba(78, 121, 167, 0.1)",
+            borderWidth: 2,
+            fill: true,
+            pointRadius: 0,
+            pointBackgroundColor: "#4e79a7",
+            pointBorderColor: "#fff",
+            pointBorderWidth: 2,
+            pointHoverRadius: 6,
+            tension: 0.3
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        interaction: {
+          mode: "index",
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: true,
+            position: "top"
+          },
+          tooltip: {
+            enabled: true,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            padding: 12,
+            titleFont: { size: 14, weight: "bold" },
+            bodyFont: { size: 13 },
+            borderColor: "#4e79a7",
+            borderWidth: 1,
+            callbacks: {
+              label: (context) => `Portfolio Value: $${context.parsed.y.toFixed(2)}`
+            }
+          }
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              callback: (value) => `$${value.toFixed(0)}`
+            }
+          }
+        }
+      },
+      plugins: [verticalLinePlugin]
+    });
+  } catch (err) {
+    console.error("Error loading performance chart:", err);
+  }
+}
+
+function setDefaultPerformanceDates() {
+  const endDateInput = document.getElementById("perf-end-date");
+  const startDateInput = document.getElementById("perf-start-date");
+
+  const today = new Date();
+  const endDate = new Date(today);
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - 90);
+
+  const formatDate = (date) => date.toISOString().split("T")[0];
+
+  if (endDateInput) endDateInput.value = formatDate(endDate);
+  if (startDateInput) startDateInput.value = formatDate(startDate);
+}
+
+const perfLoadBtn = document.getElementById("perf-load-btn");
+if (perfLoadBtn) {
+  perfLoadBtn.addEventListener("click", async () => {
+    const startDate = document.getElementById("perf-start-date").value;
+    const endDate = document.getElementById("perf-end-date").value;
+    await loadPerformanceChart(startDate, endDate);
+  });
+}
+
+document.querySelectorAll(".perf-period-btn").forEach(btn => {
+  btn.addEventListener("click", async (e) => {
+    const period = e.target.dataset.period;
+    const { start, end } = getDateRangeForPeriod(period);
+    document.getElementById("perf-start-date").value = start;
+    document.getElementById("perf-end-date").value = end;
+    await loadPerformanceChart(start, end);
+  });
+});
+
 // Handle date and load data as soon as the page is ready
 window.addEventListener("DOMContentLoaded", () => {
   const currentDateEl = document.getElementById("current-date");
   if (currentDateEl) {
     currentDateEl.textContent = getTodayDate();
   }
+  setDefaultPerformanceDates();
   loadPortfolio();
+  const startDate = document.getElementById("perf-start-date").value;
+  const endDate = document.getElementById("perf-end-date").value;
+  loadPerformanceChart(startDate, endDate);
 });
