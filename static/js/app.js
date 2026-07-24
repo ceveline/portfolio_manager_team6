@@ -36,14 +36,71 @@ function getTodayDate() {
 }
 
 function resetHistoryFilter() {
-  document.getElementById("history-filter-action").value = "";
-  document.getElementById("history-filter-ticker").value = "";
-  document.getElementById("history-filter-quantity-operator").value = "";
-  document.getElementById("history-filter-quantity").value = "";
-  document.getElementById("history-filter-price-operator").value = "";
-  document.getElementById("history-filter-price").value = "";
-  document.getElementById("history-filter-price-range").value = "";
-  document.getElementById("history-filter-year").value = "";
+  const actionEl = document.getElementById("history-filter-action");
+  const tickerEl = document.getElementById("history-filter-ticker");
+  const quantityOperatorEl = document.getElementById("history-filter-quantity-operator");
+  const quantityEl = document.getElementById("history-filter-quantity");
+  const priceOperatorEl = document.getElementById("history-filter-price-operator");
+  const priceEl = document.getElementById("history-filter-price");
+  const priceRangeEl = document.getElementById("history-filter-price-range");
+  const yearEl = document.getElementById("history-filter-year");
+  const dateEl = document.getElementById("history-filter-date");
+
+  if (actionEl) actionEl.value = "";
+  if (tickerEl) tickerEl.value = "";
+  if (quantityOperatorEl) quantityOperatorEl.value = "";
+  if (quantityEl) quantityEl.value = "";
+  if (priceOperatorEl) priceOperatorEl.value = "";
+  if (priceEl) priceEl.value = "";
+  if (priceRangeEl) priceRangeEl.value = "";
+  if (yearEl) yearEl.value = "";
+  if (dateEl) dateEl.value = "";
+}
+
+function getDisplayedPurchasePrice() {
+  const priceDisplay = document.getElementById("purchase_price");
+  if (!priceDisplay) return null;
+
+  const rawText = (priceDisplay.textContent || priceDisplay.innerText || "").trim();
+  if (!rawText || rawText === "-") return null;
+
+  const cleaned = rawText.replace(/[$,\s]/g, "");
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+async function fetchAndDisplayPrice(ticker) {
+  const priceDisplay = document.getElementById("purchase_price");
+  if (!priceDisplay) return null;
+
+  if (!ticker) {
+    priceDisplay.textContent = "-";
+    return null;
+  }
+
+  priceDisplay.textContent = "Loading...";
+
+  try {
+    const res = await fetch(`${API_BASE}/price/${encodeURIComponent(ticker)}`);
+    const payload = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(payload.error || "price request failed");
+    }
+
+    const priceValue = Number(payload.price ?? payload.price_data?.close?.[0] ?? payload.close);
+
+    if (Number.isFinite(priceValue)) {
+      priceDisplay.textContent = `$${priceValue.toFixed(2)}`;
+      return priceValue;
+    }
+
+    throw new Error("invalid price response");
+  } catch (err) {
+    console.error("Error fetching price:", err);
+    priceDisplay.textContent = "Unavailable";
+    return null;
+  }
 }
 
 async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
@@ -349,54 +406,47 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
   document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
 });
 
-document.getElementById("ticker").addEventListener("change", async (e) => {
-  const ticker = e.target.value.trim();
-  const priceDisplay = document.getElementById("purchase_price");
+const tickerSelect = document.getElementById("ticker");
+if (tickerSelect) {
+  tickerSelect.addEventListener("change", async (e) => {
+    const ticker = e.target.value.trim();
+    await fetchAndDisplayPrice(ticker);
+  });
+}
 
-  if (!ticker) {
-    priceDisplay.textContent = "-";
-    return;
-  }
+const holdingForm = document.getElementById("holding-form");
+if (holdingForm) {
+  holdingForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  try {
-    const res = await fetch(`${API_BASE}/price/${ticker}`);
-    if (res.ok) {
-      const data = await res.json();
-      priceDisplay.textContent = `$${data.price.toFixed(2)}`;
-    } else {
-      priceDisplay.textContent = "Unavailable";
-      alert(`Could not fetch a price for ${ticker}. Please try again.`);
+    const ticker = document.getElementById("ticker")?.value?.trim();
+    const quantity = parseFloat(document.getElementById("quantity")?.value || "");
+    let purchasePrice = getDisplayedPurchasePrice();
+    const purchaseDate = getTodayDate();
+
+    if (!ticker || !quantity || !Number.isFinite(purchasePrice)) {
+      if (ticker) {
+        purchasePrice = await fetchAndDisplayPrice(ticker);
+      }
     }
-  } catch (err) {
-    console.error("Error fetching price:", err);
-    priceDisplay.textContent = "Unavailable";
-    alert(`Could not fetch a price for ${ticker}. Please try again.`);
-  }
-});
 
-document.getElementById("holding-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
+    if (!ticker || !quantity || !Number.isFinite(purchasePrice)) {
+      return;
+    }
 
-  const ticker = document.getElementById("ticker").value;
-  const quantity = parseFloat(document.getElementById("quantity").value);
-  const purchasePrice = parseFloat(document.getElementById("purchase_price").textContent.replace("$", ""));
-  const purchaseDate = getTodayDate();
-
-  if (!ticker || !quantity || !purchasePrice) {
-    return;
-  }
-
-  try {
-    await buyStock(ticker, quantity, purchasePrice, purchaseDate);
-    e.target.reset();
-    document.getElementById("purchase_price").textContent = "-";
-    resetHistoryFilter();
-    await loadPortfolio();
-  } catch (err) {
-    console.error("Buy failed:", err);
-    alert(err.message);
-  }
-});
+    try {
+      await buyStock(ticker, quantity, purchasePrice, purchaseDate);
+      e.target.reset();
+      const purchasePriceEl = document.getElementById("purchase_price");
+      if (purchasePriceEl) purchasePriceEl.textContent = "-";
+      resetHistoryFilter();
+      await loadPortfolio();
+    } catch (err) {
+      console.error("Buy failed:", err);
+      alert(err.message);
+    }
+  });
+}
 
 document.getElementById("sell-form").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -418,42 +468,54 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   loadPortfolio();
 });
 
-document.getElementById("refresh-data-btn").addEventListener("click", () => loadPortfolio());
-document.getElementById("history-filter-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
+const refreshButton = document.getElementById("refresh-data-btn");
+if (refreshButton) {
+  refreshButton.addEventListener("click", () => loadPortfolio());
+}
 
-  const filters = {};
-  const action = document.getElementById("history-filter-action").value.trim();
-  const ticker = document.getElementById("history-filter-ticker").value.trim();
-  const quantityOperator = document.getElementById("history-filter-quantity-operator").value;
-  const quantityValue = document.getElementById("history-filter-quantity").value.trim();
-  const priceOperator = document.getElementById("history-filter-price-operator").value;
-  const priceValue = document.getElementById("history-filter-price").value.trim();
-  const priceRange = document.getElementById("history-filter-price-range").value;
-  const year = document.getElementById("history-filter-year").value.trim();
+const historyFilterForm = document.getElementById("history-filter-form");
+if (historyFilterForm) {
+  historyFilterForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
 
-  if (action) filters.action = action;
-  if (ticker) filters.ticker = ticker;
-  if (quantityOperator && quantityValue) filters.quantity = `${quantityOperator}${quantityValue}`;
-  if (priceOperator && priceValue) {
-    const normalizedPrice = Number(priceValue).toString();
-    filters.price = `${priceOperator}${normalizedPrice}`;
-  }
-  if (priceRange) filters.price_range = priceRange;
-  if (year) filters.year = year;
+    const filters = {};
+    const action = document.getElementById("history-filter-action")?.value?.trim();
+    const ticker = document.getElementById("history-filter-ticker")?.value?.trim();
+    const quantityOperator = document.getElementById("history-filter-quantity-operator")?.value;
+    const quantityValue = document.getElementById("history-filter-quantity")?.value?.trim();
+    const priceOperator = document.getElementById("history-filter-price-operator")?.value;
+    const priceValue = document.getElementById("history-filter-price")?.value?.trim();
+    const priceRange = document.getElementById("history-filter-price-range")?.value;
+    const year = document.getElementById("history-filter-year")?.value?.trim();
+    const dateValue = document.getElementById("history-filter-date")?.value?.trim();
 
-  if (Object.keys(filters).length === 0) {
+    if (action) filters.action = action;
+    if (ticker) filters.ticker = ticker;
+    if (quantityOperator && quantityValue) filters.quantity = `${quantityOperator}${quantityValue}`;
+    if (priceOperator && priceValue) {
+      const normalizedPrice = Number(priceValue).toString();
+      filters.price = `${priceOperator}${normalizedPrice}`;
+    }
+    if (priceRange) filters.price_range = priceRange;
+    if (year) filters.year = year;
+    if (dateValue) filters.date = dateValue;
+
+    if (Object.keys(filters).length === 0) {
+      await loadPortfolio();
+      return;
+    }
+
+    await loadPortfolio(filters);
+  });
+}
+
+const clearFilterButton = document.getElementById("clear-filter-btn");
+if (clearFilterButton) {
+  clearFilterButton.addEventListener("click", async () => {
+    resetHistoryFilter();
     await loadPortfolio();
-    return;
-  }
-
-  await loadPortfolio(filters);
-});
-
-document.getElementById("clear-filter-btn").addEventListener("click", async () => {
-  resetHistoryFilter();
-  await loadPortfolio();
-});
+  });
+}
 
 // Handle date and load data as soon as the page is ready
 window.addEventListener("DOMContentLoaded", () => {

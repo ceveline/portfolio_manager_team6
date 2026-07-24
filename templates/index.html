@@ -214,6 +214,63 @@
 <section id="history" class="card mb-4">
   <div class="card-body">
     <h2 class="card-title mb-3">Transaction History</h2>
+
+    <form id="history-filter-form" class="row g-3 mb-3">
+      <div class="col-md-2">
+        <label class="form-label">Action</label>
+        <input type="text" id="history-filter-action" class="form-control" placeholder="buy/sell" />
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Ticker</label>
+        <input type="text" id="history-filter-ticker" class="form-control" placeholder="AAPL" />
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Qty</label>
+        <select id="history-filter-quantity-operator" class="form-select">
+          <option value="">Any</option>
+          <option value=">">&gt;</option>
+          <option value=">=">&gt;=</option>
+          <option value="<">&lt;</option>
+          <option value="<=">&lt;=</option>
+          <option value="=">=</option>
+        </select>
+        <input type="number" id="history-filter-quantity" class="form-control mt-2" step="any" placeholder="Qty" />
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Price</label>
+        <select id="history-filter-price-operator" class="form-select">
+          <option value="">Any</option>
+          <option value=">">&gt;</option>
+          <option value=">=">&gt;=</option>
+          <option value="<">&lt;</option>
+          <option value="<=">&lt;=</option>
+          <option value="=">=</option>
+        </select>
+        <input type="text" id="history-filter-price" class="form-control mt-2" placeholder="300" />
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Range</label>
+        <select id="history-filter-price-range" class="form-select">
+          <option value="">All</option>
+          <option value="0-50">$0–$50</option>
+          <option value="50-100">$50–$100</option>
+          <option value="100-500">$100–$500</option>
+          <option value="500-1000">$500–$1000</option>
+          <option value="1000+">$1000+</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Year</label>
+        <input type="number" id="history-filter-year" class="form-control" placeholder="2026" />
+        <label class="form-label mt-2">Date</label>
+        <input type="date" id="history-filter-date" class="form-control" />
+      </div>
+      <div class="col-12 d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Apply</button>
+        <button type="button" id="clear-filter-btn" class="btn btn-outline-secondary">Clear</button>
+      </div>
+    </form>
+
     <div class="table-responsive">
       <table id="history-table" class="table table-vcenter table-striped">
 
