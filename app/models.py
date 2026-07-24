@@ -49,3 +49,24 @@ class Transaction(db.Model):
             "price": self.price,
             "transaction_date": self.transaction_date.isoformat(),
         }
+
+
+class PriceHistory(db.Model):
+    """Daily closing price per ticker, backfilled from yfinance."""
+
+    __tablename__ = "price_history"
+    __table_args__ = (
+        db.UniqueConstraint("ticker", "price_date", name="uq_ticker_price_date"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    ticker = db.Column(db.String(10), nullable=False, index=True)
+    price_date = db.Column(db.Date, nullable=False)
+    close_price = db.Column(db.Float, nullable=False)
+
+    def to_dict(self):
+        return {
+            "ticker": self.ticker,
+            "date": self.price_date.isoformat(),
+            "close_price": self.close_price,
+        }
