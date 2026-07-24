@@ -1,5 +1,6 @@
 const API_BASE = "/api";
 let holdingsData = [];
+let portfolioPieChart = null;
 
 async function loadPortfolio(filters = {}) {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
@@ -20,7 +21,7 @@ async function loadPortfolio(filters = {}) {
   const historyRes = await fetch(historyUrl);
   const history = await historyRes.json();
 
-  loadConsolidated(consolidated);
+  await loadConsolidated(consolidated);
   loadHistory(history);
   populateSellDropdown(holdings);
   clearSellDetails();
@@ -67,36 +68,110 @@ async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
   return response.json();
 }
 
-function loadConsolidated(consolidated) {
+async function loadConsolidated(consolidated) {
   const tbody = document.getElementById("consolidated-body");
   tbody.innerHTML = "";
 
   let totalValue = 0;
   let totalShares = 0;
+  let totalCostBasis = 0;
+  let totalGainLoss = 0;
+
+  const currentPrices = await Promise.all(
+    consolidated.map(async (item) => {
+      try {
+        const res = await fetch(`${API_BASE}/price/${item.ticker}`);
+        if (res.ok) {
+          const data = await res.json();
+          const priceValue = data.price ?? data.price_data?.close ?? data.close;
+          return Number(priceValue || 0);
+        }
+      } catch (err) {
+        console.error("Error fetching price:", err);
+      }
+      return null;
+    }),
+  );
 
   if (!consolidated.length) {
-    tbody.innerHTML = '<tr class="empty-state"><td colspan="3">No portfolio data yet.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-state"><td colspan="5">No portfolio data yet.</td></tr>';
     document.querySelector("#total-value strong").textContent = "$0.00";
     document.querySelector("#total-shares strong").textContent = "0";
+    document.querySelector("#total-holdings strong").textContent = "0";
+    document.querySelector("#total-gain-loss strong").textContent = "$0.00";
     return;
   }
 
-  consolidated.forEach((item) => {
+  consolidated.forEach((item, index) => {
     const row = document.createElement("tr");
-    const itemValue = item.quantity * item.avg_price;
+    const avgPrice = Number(item.avg_price || 0);
+    const quantity = Number(item.quantity || 0);
+    const itemValue = quantity * avgPrice;
+    const currentPrice = currentPrices[index];
+    const costBasis = quantity * avgPrice;
+
     totalValue += itemValue;
-    totalShares += item.quantity;
+    totalShares += quantity;
+    totalCostBasis += costBasis;
+
+    let gainLossCell = "-";
+    if (currentPrice != null) {
+      const gainLoss = (currentPrice - avgPrice) * quantity;
+      const gainLossPct = costBasis ? (gainLoss / costBasis) * 100 : 0;
+      totalGainLoss += gainLoss;
+      const sign = gainLoss >= 0 ? "+" : "";
+      gainLossCell = `${sign}$${gainLoss.toFixed(2)} (${sign}${gainLossPct.toFixed(2)}%)`;
+    }
 
     row.innerHTML = `
       <td>${item.ticker}</td>
-      <td>${item.quantity}</td>
-      <td>$${item.avg_price.toFixed(2)}</td>
+      <td>${quantity}</td>
+      <td>$${avgPrice.toFixed(2)}</td>
+      <td>$${itemValue.toFixed(2)}</td>
+      <td>${gainLossCell}</td>
     `;
     tbody.appendChild(row);
   });
 
   document.querySelector("#total-value strong").textContent = `$${totalValue.toFixed(2)}`;
   document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
+  document.querySelector("#total-holdings strong").textContent = consolidated.length;
+
+  const totalGainLossPct = totalCostBasis ? (totalGainLoss / totalCostBasis) * 100 : 0;
+  const totalSign = totalGainLoss >= 0 ? "+" : "";
+  document.querySelector("#total-gain-loss strong").textContent =
+    `${totalSign}$${totalGainLoss.toFixed(2)} (${totalSign}${totalGainLossPct.toFixed(2)}%)`;
+
+  renderPortfolioPieChart(consolidated);
+}
+
+function renderPortfolioPieChart(consolidated) {
+  const canvas = document.getElementById("portfolio-pie-chart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const labels = consolidated.map((item) => item.ticker);
+  const values = consolidated.map((item) => Number(item.quantity || 0) * Number(item.avg_price || 0));
+  const colors = ["#4e79a7", "#f28e2b", "#e15759", "#76b7b2", "#59a14f", "#edc948", "#b07aa1", "#ff9da7"];
+
+  if (portfolioPieChart) {
+    portfolioPieChart.data.labels = labels;
+    portfolioPieChart.data.datasets[0].data = values;
+    portfolioPieChart.update();
+    return;
+  }
+
+  portfolioPieChart = new Chart(canvas, {
+    type: "doughnut",
+    data: {
+      labels,
+      datasets: [{ data: values, backgroundColor: colors }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      aspectRatio: 1,
+    },
+  });
 }
 
 function loadHistory(history) {
@@ -104,18 +179,22 @@ function loadHistory(history) {
   tbody.innerHTML = "";
 
   if (!history.length) {
-    tbody.innerHTML = '<tr class="empty-state"><td colspan="5">No transaction history yet.</td></tr>';
+    tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
     return;
   }
 
   history.forEach((t) => {
     const row = document.createElement("tr");
     const action = t.action.charAt(0).toUpperCase() + t.action.slice(1);
+    const pricePerShare = Number(t.price || 0);
+    const quantity = Number(t.quantity || 0);
+    const totalValue = quantity * pricePerShare;
     row.innerHTML = `
       <td>${action}</td>
       <td>${t.ticker}</td>
-      <td>${t.quantity}</td>
-      <td>$${t.price.toFixed(2)}</td>
+      <td>${quantity}</td>
+      <td>$${pricePerShare.toFixed(2)}</td>
+      <td>$${totalValue.toFixed(2)}</td>
       <td>${t.transaction_date}</td>
     `;
     tbody.appendChild(row);
