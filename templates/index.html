@@ -18,52 +18,50 @@
 
     
     <div id="portfolio-summary" class="row row-cards mb-4">
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="text-muted">Total Value</div>
+            <div id="total-value" class="h2 mb-0">
+              <strong>$0.00</strong>
+            </div>
+          </div>
+        </div>
+      </div>
 
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-body">
-        <div class="text-muted">Total Value</div>
-        <div id="total-value" class="h2 mb-0">
-          <strong>$0.00</strong>
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="text-muted">Total Shares</div>
+            <div id="total-shares" class="h2 mb-0">
+              <strong>0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="text-muted">Number of Holdings</div>
+            <div id="total-holdings" class="h2 mb-0">
+              <strong>0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="text-muted">Gain/Loss</div>
+            <div id="total-gain-loss" class="h2 mb-0">
+              <strong>$0.00 (0.00%)</strong>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-body">
-        <div class="text-muted">Total Shares</div>
-        <div id="total-shares" class="h2 mb-0">
-          <strong>0</strong>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-body">
-        <div class="text-muted">Number of Holdings</div>
-        <div id="total-holdings" class="h2 mb-0">
-          <strong>0</strong>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="col-md-3">
-    <div class="card">
-      <div class="card-body">
-        <div class="text-muted">Gain/Loss</div>
-        <div id="total-gain-loss" class="h2 mb-0">
-          <strong>$0.00 (0.00%)</strong>
-        </div>
-      </div>
-    </div>
-  </div>
-
-</div>
 
 
     <div id="date-time">
@@ -71,6 +69,7 @@
         <p>Date: </p><span id="current-date"></span>
       </div>
       <span id="current-time"></span>
+    </div>
   </header>
 
   <main>
@@ -195,27 +194,26 @@
             <th>Ticker</th>
             <th>Quantity</th>
             <th>Avg Price</th>
+            <th>Total Value</th>
             <th>Gain/Loss</th>
           </tr>
         </thead>
-
-        <tbody id="consolidated-body"></tbody>
-
+        <tbody id="consolidated-body">
+            <tr class="empty-state">
+              <td colspan="5">No portfolio data yet.</td>
+            </tr>        
+        </tbody>
       </table>
     </div>
-
     <div id="portfolio-chart-container" class="mt-4">
       <canvas id="portfolio-pie-chart"></canvas>
     </div>
-
   </div>
 </section>
 
-    <section id="history" class="card mb-4">
+<section id="history" class="card mb-4">
   <div class="card-body">
-
     <h2 class="card-title mb-3">Transaction History</h2>
-
     <div class="table-responsive">
       <table id="history-table" class="table table-vcenter table-striped">
 
@@ -224,10 +222,12 @@
             <th>Action</th>
             <th>Ticker</th>
             <th>Quantity</th>
-            <th>Price</th>
+            <th>Price/Share</th>
+            <th>Total Value</th>
             <th>Date</th>
           </tr>
         </thead>
+
 
         <tbody id="history-body"></tbody>
 

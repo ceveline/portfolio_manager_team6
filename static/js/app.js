@@ -2,7 +2,7 @@ const API_BASE = "/api";
 let holdingsData = [];
 let portfolioPieChart = null;
 
-async function loadPortfolio() {
+async function loadPortfolio(filters = {}) {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
@@ -10,10 +10,18 @@ async function loadPortfolio() {
   const consolidatedRes = await fetch(`${API_BASE}/consolidated`);
   const consolidated = await consolidatedRes.json();
 
-  const historyRes = await fetch(`${API_BASE}/transactions`);
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== "" && value !== null && value !== undefined) {
+      params.append(key, value);
+    }
+  });
+
+  const historyUrl = `${API_BASE}/transactions${params.toString() ? `?${params.toString()}` : ""}`;
+  const historyRes = await fetch(historyUrl);
   const history = await historyRes.json();
 
-  loadConsolidated(consolidated);
+  await loadConsolidated(consolidated);
   loadHistory(history);
   populateSellDropdown(holdings);
   clearSellDetails();
@@ -25,6 +33,17 @@ function getTodayDate() {
   const month = String(today.getMonth() + 1).padStart(2, "0");
   const day = String(today.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function resetHistoryFilter() {
+  document.getElementById("history-filter-action").value = "";
+  document.getElementById("history-filter-ticker").value = "";
+  document.getElementById("history-filter-quantity-operator").value = "";
+  document.getElementById("history-filter-quantity").value = "";
+  document.getElementById("history-filter-price-operator").value = "";
+  document.getElementById("history-filter-price").value = "";
+  document.getElementById("history-filter-price-range").value = "";
+  document.getElementById("history-filter-year").value = "";
 }
 
 async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
@@ -62,101 +81,212 @@ async function loadConsolidated(consolidated) {
     consolidated.map(async (item) => {
       try {
         const res = await fetch(`${API_BASE}/price/${item.ticker}`);
+
         if (res.ok) {
           const data = await res.json();
-          return data.price;
+          const priceValue =
+            data.price ??
+            data.price_data?.close ??
+            data.close;
+
+          return Number(priceValue || 0);
         }
       } catch (err) {
         console.error("Error fetching price:", err);
       }
+
       return null;
     })
   );
 
-  consolidated.forEach((item, i) => {
-    const row = document.createElement("tr");
-    const itemValue = item.quantity * item.avg_price;
-    totalValue += itemValue;
-    totalShares += item.quantity;
 
-    const currentPrice = currentPrices[i];
-    const costBasis = item.quantity * item.avg_price;
+  if (!consolidated.length) {
+    tbody.innerHTML =
+      '<tr class="empty-state"><td colspan="5">No portfolio data yet.</td></tr>';
+
+    document.querySelector("#total-value strong").textContent = "$0.00";
+    document.querySelector("#total-shares strong").textContent = "0";
+    document.querySelector("#total-holdings strong").textContent = "0";
+    document.querySelector("#total-gain-loss strong").textContent =
+      "$0.00 (0.00%)";
+
+    return;
+  }
+
+
+  consolidated.forEach((item, index) => {
+
+    const row = document.createElement("tr");
+
+    const avgPrice = Number(item.avg_price || 0);
+    const quantity = Number(item.quantity || 0);
+
+    const itemValue = quantity * avgPrice;
+    const costBasis = itemValue;
+
+    const currentPrice = currentPrices[index];
+
+
+    totalValue += itemValue;
+    totalShares += quantity;
     totalCostBasis += costBasis;
 
+
     let gainLossCell = "-";
+
     if (currentPrice != null) {
-      const gainLoss = (currentPrice - item.avg_price) * item.quantity;
-      const gainLossPct = (gainLoss / costBasis) * 100;
+
+      const gainLoss =
+        (currentPrice - avgPrice) * quantity;
+
+      const gainLossPct =
+        costBasis ? (gainLoss / costBasis) * 100 : 0;
+
+
       totalGainLoss += gainLoss;
+
+
       const sign = gainLoss >= 0 ? "+" : "";
-      gainLossCell = `${sign}$${gainLoss.toFixed(2)} (${sign}${gainLossPct.toFixed(2)}%)`;
+
+
+      gainLossCell =
+        `${sign}$${gainLoss.toFixed(2)}
+        (${sign}${gainLossPct.toFixed(2)}%)`;
     }
+
 
     row.innerHTML = `
       <td>${item.ticker}</td>
-      <td>${item.quantity}</td>
-      <td>$${item.avg_price.toFixed(2)}</td>
+      <td>${quantity}</td>
+      <td>$${avgPrice.toFixed(2)}</td>
+      <td>$${itemValue.toFixed(2)}</td>
       <td>${gainLossCell}</td>
     `;
+
+
     tbody.appendChild(row);
+
   });
 
-  document.querySelector("#total-value strong").textContent = `$${totalValue.toFixed(2)}`;
-  document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
-  document.querySelector("#total-holdings strong").textContent = consolidated.length;
 
-  const totalGainLossPct = totalCostBasis ? (totalGainLoss / totalCostBasis) * 100 : 0;
-  const totalSign = totalGainLoss >= 0 ? "+" : "";
+  document.querySelector("#total-value strong").textContent =
+    `$${totalValue.toFixed(2)}`;
+
+  document.querySelector("#total-shares strong").textContent =
+    totalShares.toFixed(0);
+
+  document.querySelector("#total-holdings strong").textContent =
+    consolidated.length;
+
+
+  const totalGainLossPct =
+    totalCostBasis
+      ? (totalGainLoss / totalCostBasis) * 100
+      : 0;
+
+
+  const sign =
+    totalGainLoss >= 0 ? "+" : "";
+
+
   document.querySelector("#total-gain-loss strong").textContent =
-    `${totalSign}$${totalGainLoss.toFixed(2)} (${totalSign}${totalGainLossPct.toFixed(2)}%)`;
+    `${sign}$${totalGainLoss.toFixed(2)}
+    (${sign}${totalGainLossPct.toFixed(2)}%)`;
+
 
   renderPortfolioPieChart(consolidated);
 }
 
 function renderPortfolioPieChart(consolidated) {
-  const canvas = document.getElementById("portfolio-pie-chart");
-  if (!canvas) return;
 
-  const labels = consolidated.map((item) => item.ticker);
-  const values = consolidated.map((item) => item.quantity * item.avg_price);
-  const colors = [
-    "#4e79a7", "#f28e2b", "#e15759", "#76b7b2",
-    "#59a14f", "#edc948", "#b07aa1", "#ff9da7",
-  ];
+  const canvas = document.getElementById(
+    "portfolio-pie-chart"
+  );
 
-  if (portfolioPieChart) {
-    portfolioPieChart.data.labels = labels;
-    portfolioPieChart.data.datasets[0].data = values;
-    portfolioPieChart.update();
+  if (!canvas || typeof Chart === "undefined") {
     return;
   }
 
+
+  const labels = consolidated.map(
+    item => item.ticker
+  );
+
+
+  const values = consolidated.map(
+    item =>
+      Number(item.quantity || 0) *
+      Number(item.avg_price || 0)
+  );
+
+
+  const colors = [
+    "#4e79a7",
+    "#f28e2b",
+    "#e15759",
+    "#76b7b2",
+    "#59a14f",
+    "#edc948",
+    "#b07aa1",
+    "#ff9da7"
+  ];
+
+
+  if (portfolioPieChart) {
+
+    portfolioPieChart.data.labels = labels;
+    portfolioPieChart.data.datasets[0].data = values;
+    portfolioPieChart.update();
+
+    return;
+  }
+
+
   portfolioPieChart = new Chart(canvas, {
+
     type: "doughnut",
+
     data: {
       labels,
-      datasets: [{ data: values, backgroundColor: colors }],
+      datasets: [
+        {
+          data: values,
+          backgroundColor: colors
+        }
+      ]
     },
+
     options: {
-      responsive: true,
-      maintainAspectRatio: true,
-      aspectRatio: 1,
-    },
+      responsive:true,
+      maintainAspectRatio:true,
+      aspectRatio:1
+    }
+
   });
+
 }
 
 function loadHistory(history) {
   const tbody = document.getElementById("history-body");
   tbody.innerHTML = "";
 
+  if (!history.length) {
+    tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
+    return;
+  }
+
   history.forEach((t) => {
     const row = document.createElement("tr");
     const action = t.action.charAt(0).toUpperCase() + t.action.slice(1);
+    const pricePerShare = Number(t.price || 0);
+    const quantity = Number(t.quantity || 0);
+    const totalValue = quantity * pricePerShare;
     row.innerHTML = `
       <td>${action}</td>
       <td>${t.ticker}</td>
-      <td>${t.quantity}</td>
-      <td>$${t.price.toFixed(2)}</td>
+      <td>${quantity}</td>
+      <td>$${pricePerShare.toFixed(2)}</td>
+      <td>$${totalValue.toFixed(2)}</td>
       <td>${t.transaction_date}</td>
     `;
     tbody.appendChild(row);
@@ -173,6 +303,21 @@ function populateSellDropdown(holdings) {
     option.textContent = `${h.ticker} (${h.quantity} shares)`;
     sellSelect.appendChild(option);
   });
+}
+
+function getPortfolioAvgPrice(ticker, holdings = holdingsData) {
+  const matchingHoldings = holdings.filter((holding) => holding.ticker === ticker);
+  if (!matchingHoldings.length) {
+    return 0;
+  }
+
+  const totalQuantity = matchingHoldings.reduce((sum, holding) => sum + Number(holding.quantity || 0), 0);
+  const weightedCost = matchingHoldings.reduce(
+    (sum, holding) => sum + Number(holding.quantity || 0) * Number(holding.purchase_price || 0),
+    0,
+  );
+
+  return totalQuantity ? weightedCost / totalQuantity : 0;
 }
 
 function clearSellDetails() {
@@ -200,16 +345,8 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
 
   document.getElementById("sell-quantity-input").value = "";
 
-  try {
-    const res = await fetch(`${API_BASE}/price/${holding.ticker}`);
-    if (res.ok) {
-      const data = await res.json();
-      document.getElementById("sell-price").textContent = `$${data.price.toFixed(2)}`;
-    }
-  } catch (err) {
-    console.error("Error fetching price:", err);
-    document.getElementById("sell-price").textContent = "-";
-  }
+  const averagePrice = getPortfolioAvgPrice(holding.ticker, holdingsData);
+  document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
 });
 
 document.getElementById("ticker").addEventListener("change", async (e) => {
@@ -253,6 +390,7 @@ document.getElementById("holding-form").addEventListener("submit", async (e) => 
     await buyStock(ticker, quantity, purchasePrice, purchaseDate);
     e.target.reset();
     document.getElementById("purchase_price").textContent = "-";
+    resetHistoryFilter();
     await loadPortfolio();
   } catch (err) {
     console.error("Buy failed:", err);
@@ -276,12 +414,52 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   await fetch(url, { method: "DELETE" });
 
   e.target.reset();
+  resetHistoryFilter();
   loadPortfolio();
 });
 
-document.getElementById("refresh-data-btn").addEventListener("click", loadPortfolio);
+document.getElementById("refresh-data-btn").addEventListener("click", () => loadPortfolio());
+document.getElementById("history-filter-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
 
+  const filters = {};
+  const action = document.getElementById("history-filter-action").value.trim();
+  const ticker = document.getElementById("history-filter-ticker").value.trim();
+  const quantityOperator = document.getElementById("history-filter-quantity-operator").value;
+  const quantityValue = document.getElementById("history-filter-quantity").value.trim();
+  const priceOperator = document.getElementById("history-filter-price-operator").value;
+  const priceValue = document.getElementById("history-filter-price").value.trim();
+  const priceRange = document.getElementById("history-filter-price-range").value;
+  const year = document.getElementById("history-filter-year").value.trim();
 
-//Handle date
-document.getElementById("current-date").textContent = getTodayDate();
-loadPortfolio();
+  if (action) filters.action = action;
+  if (ticker) filters.ticker = ticker;
+  if (quantityOperator && quantityValue) filters.quantity = `${quantityOperator}${quantityValue}`;
+  if (priceOperator && priceValue) {
+    const normalizedPrice = Number(priceValue).toString();
+    filters.price = `${priceOperator}${normalizedPrice}`;
+  }
+  if (priceRange) filters.price_range = priceRange;
+  if (year) filters.year = year;
+
+  if (Object.keys(filters).length === 0) {
+    await loadPortfolio();
+    return;
+  }
+
+  await loadPortfolio(filters);
+});
+
+document.getElementById("clear-filter-btn").addEventListener("click", async () => {
+  resetHistoryFilter();
+  await loadPortfolio();
+});
+
+// Handle date and load data as soon as the page is ready
+window.addEventListener("DOMContentLoaded", () => {
+  const currentDateEl = document.getElementById("current-date");
+  if (currentDateEl) {
+    currentDateEl.textContent = getTodayDate();
+  }
+  loadPortfolio();
+});
