@@ -1,29 +1,218 @@
 body {
-  font-family: Arial, sans-serif;
-  max-width: 800px;
-  margin: 2rem auto;
-  color: #222;
+  font-family: Inter, Arial, sans-serif;
+  background-color: f1f5f9;
+  color: #1f2937;
+  margin: 0;
+  padding: 2rem;
 }
 
-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
+main {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
-th, td {
-  border: 1px solid #ccc;
-  padding: 0.5rem;
-  text-align: left;
+header {
+  max-width: 1200px;
+  margin: 0 auto 2rem;
 }
 
-form {
+h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+}
+
+h2 {
+  font-size: 1.4rem;
+  font-weight: 600;
+}
+
+/* Dashboard cards */
+.card {
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+#portfolio-summary .col-md-3 {
   display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
 }
 
+#portfolio-summary .card {
+  width: 100%;
+  height: 100%;
+}
+
+#portfolio-summary .card-body {
+  width: 100%;
+  height: 100%;
+}
+
+/* Summary cards */
+#portfolio-summary {
+  margin-bottom: 2rem;
+}
+
+
+/* Buttons */
 button {
   cursor: pointer;
+  border-radius: 8px;
+  transition: 0.2s ease;
+}
+
+button:hover {
+  transform: translateY(-1px);
+}
+
+
+/* Forms */
+form {
+  margin-bottom: 0;
+}
+
+select,
+input {
+  border-radius: 8px !important;
+}
+
+
+/* Tables */
+.table {
+  margin-bottom: 0;
+}
+
+.table th {
+  font-weight: 600;
+}
+
+
+/* Date and time */
+#portfolio-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.75rem 0 1rem;
+}
+
+#date-time {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-top: 1rem;
+  color: #6b7280;
+}
+
+#date {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+#date p {
+  margin: 0;
+}
+
+
+/* Chart */
+#portfolio-chart-container {
+  max-width: 450px;
+  margin: 2rem auto 0;
+}
+
+
+/* Inputs */
+#ticker,
+#sell-ticker {
+  width: 100%;
+}
+
+#quantity,
+#sell-quantity-input {
+  width: 100%;
+}
+
+.dashboard-header {
+  margin-bottom: 2rem;
+}
+
+.dashboard-header h1 {
+  margin-bottom: 0.25rem;
+}
+
+.dashboard-header p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+/* Finance dashboard theme */
+
+.dashboard-header h1 {
+  color: #0f172a;
+}
+
+.card {
+  background: white;
+  border-radius: 14px;
+}
+
+.card-title {
+  color: #0f172a;
+}
+
+.text-muted {
+  color: #64748b !important;
+}
+
+
+/* Button polish */
+
+.btn-success {
+  background-color: #16a34a;
+  border-color: #16a34a;
+}
+
+.btn-danger {
+  background-color: #dc2626;
+  border-color: #dc2626;
+}
+
+.btn-outline-primary {
+  border-radius: 8px;
+}
+
+
+/* Table polish */
+
+.table thead th {
+  background-color: #f8fafc;
+  color: #475569;
+}
+
+
+/* Add spacing between dashboard sections */
+
+main section {
+  margin-bottom: 1.5rem;
+}
+
+/* Chart dashboard card */
+
+#portfolio-chart-container {
+  max-width: 500px;
+  margin: 2rem auto 0;
+  padding: 1.5rem;
+  background: white;
+  border-radius: 14px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+.empty-state {
+  color: #666;
+  font-style: italic;
+  text-align: center;
+}
+
+#portfolio-pie-chart {
+  max-width: 280px;
+  margin-top: 1rem;
 }

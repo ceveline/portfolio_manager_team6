@@ -12,7 +12,7 @@ A stock portfolio management app that tracks holdings, transactions, and portfol
 
 ## Features
 
-- **Buy & Sell Stocks** — Add and remove stocks from your portfolio
+- **Buy & Sell Stocks** — Add and remove multiple stocks from your portfolio
 - **Auto Price Lookup** — Ticker dropdown with auto-populated current prices from AWS cached API
 - **Portfolio Summary** — Live total portfolio value and share count in header
 - **Consolidated View** — See total shares and average price per ticker
@@ -125,7 +125,7 @@ Buy stocks:
 ```json
 {
   "ticker": "AAPL",
-  "quantity": 10,
+  "quantity": 12,
   "purchase_price": 150.25,
   "purchase_date": "2026-07-20"
 }

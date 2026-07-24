@@ -1,7 +1,8 @@
 const API_BASE = "/api";
 let holdingsData = [];
+let portfolioPieChart = null;
 
-async function loadPortfolio() {
+async function loadPortfolio(filters = {}) {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
@@ -9,52 +10,283 @@ async function loadPortfolio() {
   const consolidatedRes = await fetch(`${API_BASE}/consolidated`);
   const consolidated = await consolidatedRes.json();
 
-  const historyRes = await fetch(`${API_BASE}/transactions`);
+  const params = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== "" && value !== null && value !== undefined) {
+      params.append(key, value);
+    }
+  });
+
+  const historyUrl = `${API_BASE}/transactions${params.toString() ? `?${params.toString()}` : ""}`;
+  const historyRes = await fetch(historyUrl);
   const history = await historyRes.json();
 
-  loadConsolidated(consolidated);
+  await loadConsolidated(consolidated);
   loadHistory(history);
   populateSellDropdown(holdings);
   clearSellDetails();
 }
 
-function loadConsolidated(consolidated) {
+function getTodayDate() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function resetHistoryFilter() {
+  document.getElementById("history-filter-action").value = "";
+  document.getElementById("history-filter-ticker").value = "";
+  document.getElementById("history-filter-quantity-operator").value = "";
+  document.getElementById("history-filter-quantity").value = "";
+  document.getElementById("history-filter-price-operator").value = "";
+  document.getElementById("history-filter-price").value = "";
+  document.getElementById("history-filter-price-range").value = "";
+  document.getElementById("history-filter-year").value = "";
+}
+
+async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
+  const body = {
+    ticker,
+    quantity,
+    purchase_price: purchasePrice,
+    purchase_date: purchaseDate || getTodayDate(),
+  };
+
+  const response = await fetch(`${API_BASE}/holdings`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData.error || "Unable to buy stock");
+  }
+
+  return response.json();
+}
+
+async function loadConsolidated(consolidated) {
   const tbody = document.getElementById("consolidated-body");
   tbody.innerHTML = "";
 
   let totalValue = 0;
   let totalShares = 0;
+  let totalCostBasis = 0;
+  let totalGainLoss = 0;
 
-  consolidated.forEach((item) => {
+  const currentPrices = await Promise.all(
+    consolidated.map(async (item) => {
+      try {
+        const res = await fetch(`${API_BASE}/price/${item.ticker}`);
+
+        if (res.ok) {
+          const data = await res.json();
+          const priceValue =
+            data.price ??
+            data.price_data?.close ??
+            data.close;
+
+          return Number(priceValue || 0);
+        }
+      } catch (err) {
+        console.error("Error fetching price:", err);
+      }
+
+      return null;
+    })
+  );
+
+
+  if (!consolidated.length) {
+    tbody.innerHTML =
+      '<tr class="empty-state"><td colspan="5">No portfolio data yet.</td></tr>';
+
+    document.querySelector("#total-value strong").textContent = "$0.00";
+    document.querySelector("#total-shares strong").textContent = "0";
+    document.querySelector("#total-holdings strong").textContent = "0";
+    document.querySelector("#total-gain-loss strong").textContent =
+      "$0.00 (0.00%)";
+
+    return;
+  }
+
+
+  consolidated.forEach((item, index) => {
+
     const row = document.createElement("tr");
-    const itemValue = item.quantity * item.avg_price;
+
+    const avgPrice = Number(item.avg_price || 0);
+    const quantity = Number(item.quantity || 0);
+
+    const itemValue = quantity * avgPrice;
+    const costBasis = itemValue;
+
+    const currentPrice = currentPrices[index];
+
+
     totalValue += itemValue;
-    totalShares += item.quantity;
+    totalShares += quantity;
+    totalCostBasis += costBasis;
+
+
+    let gainLossCell = "-";
+
+    if (currentPrice != null) {
+
+      const gainLoss =
+        (currentPrice - avgPrice) * quantity;
+
+      const gainLossPct =
+        costBasis ? (gainLoss / costBasis) * 100 : 0;
+
+
+      totalGainLoss += gainLoss;
+
+
+      const sign = gainLoss >= 0 ? "+" : "";
+
+
+      gainLossCell =
+        `${sign}$${gainLoss.toFixed(2)}
+        (${sign}${gainLossPct.toFixed(2)}%)`;
+    }
+
 
     row.innerHTML = `
       <td>${item.ticker}</td>
-      <td>${item.quantity}</td>
-      <td>$${item.avg_price.toFixed(2)}</td>
+      <td>${quantity}</td>
+      <td>$${avgPrice.toFixed(2)}</td>
+      <td>$${itemValue.toFixed(2)}</td>
+      <td>${gainLossCell}</td>
     `;
+
+
     tbody.appendChild(row);
+
   });
 
-  document.querySelector("#total-value strong").textContent = `$${totalValue.toFixed(2)}`;
-  document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
+
+  document.querySelector("#total-value strong").textContent =
+    `$${totalValue.toFixed(2)}`;
+
+  document.querySelector("#total-shares strong").textContent =
+    totalShares.toFixed(0);
+
+  document.querySelector("#total-holdings strong").textContent =
+    consolidated.length;
+
+
+  const totalGainLossPct =
+    totalCostBasis
+      ? (totalGainLoss / totalCostBasis) * 100
+      : 0;
+
+
+  const sign =
+    totalGainLoss >= 0 ? "+" : "";
+
+
+  document.querySelector("#total-gain-loss strong").textContent =
+    `${sign}$${totalGainLoss.toFixed(2)}
+    (${sign}${totalGainLossPct.toFixed(2)}%)`;
+
+
+  renderPortfolioPieChart(consolidated);
+}
+
+function renderPortfolioPieChart(consolidated) {
+
+  const canvas = document.getElementById(
+    "portfolio-pie-chart"
+  );
+
+  if (!canvas || typeof Chart === "undefined") {
+    return;
+  }
+
+
+  const labels = consolidated.map(
+    item => item.ticker
+  );
+
+
+  const values = consolidated.map(
+    item =>
+      Number(item.quantity || 0) *
+      Number(item.avg_price || 0)
+  );
+
+
+  const colors = [
+    "#4e79a7",
+    "#f28e2b",
+    "#e15759",
+    "#76b7b2",
+    "#59a14f",
+    "#edc948",
+    "#b07aa1",
+    "#ff9da7"
+  ];
+
+
+  if (portfolioPieChart) {
+
+    portfolioPieChart.data.labels = labels;
+    portfolioPieChart.data.datasets[0].data = values;
+    portfolioPieChart.update();
+
+    return;
+  }
+
+
+  portfolioPieChart = new Chart(canvas, {
+
+    type: "doughnut",
+
+    data: {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor: colors
+        }
+      ]
+    },
+
+    options: {
+      responsive:true,
+      maintainAspectRatio:true,
+      aspectRatio:1
+    }
+
+  });
+
 }
 
 function loadHistory(history) {
   const tbody = document.getElementById("history-body");
   tbody.innerHTML = "";
 
+  if (!history.length) {
+    tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
+    return;
+  }
+
   history.forEach((t) => {
     const row = document.createElement("tr");
     const action = t.action.charAt(0).toUpperCase() + t.action.slice(1);
+    const pricePerShare = Number(t.price || 0);
+    const quantity = Number(t.quantity || 0);
+    const totalValue = quantity * pricePerShare;
     row.innerHTML = `
       <td>${action}</td>
       <td>${t.ticker}</td>
-      <td>${t.quantity}</td>
-      <td>$${t.price.toFixed(2)}</td>
+      <td>${quantity}</td>
+      <td>$${pricePerShare.toFixed(2)}</td>
+      <td>$${totalValue.toFixed(2)}</td>
       <td>${t.transaction_date}</td>
     `;
     tbody.appendChild(row);
@@ -73,9 +305,27 @@ function populateSellDropdown(holdings) {
   });
 }
 
+function getPortfolioAvgPrice(ticker, holdings = holdingsData) {
+  const matchingHoldings = holdings.filter((holding) => holding.ticker === ticker);
+  if (!matchingHoldings.length) {
+    return 0;
+  }
+
+  const totalQuantity = matchingHoldings.reduce((sum, holding) => sum + Number(holding.quantity || 0), 0);
+  const weightedCost = matchingHoldings.reduce(
+    (sum, holding) => sum + Number(holding.quantity || 0) * Number(holding.purchase_price || 0),
+    0,
+  );
+
+  return totalQuantity ? weightedCost / totalQuantity : 0;
+}
+
 function clearSellDetails() {
-  document.getElementById("sell-quantity").textContent = "-";
-  document.getElementById("sell-price").textContent = "-";
+  const sellQuantityEl = document.getElementById("sell-quantity");
+  const sellPriceEl = document.getElementById("sell-price");
+
+  if (sellQuantityEl) sellQuantityEl.textContent = "-";
+  if (sellPriceEl) sellPriceEl.textContent = "-";
 }
 
 document.getElementById("sell-ticker").addEventListener("change", async (e) => {
@@ -90,19 +340,13 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
   const holding = holdingsData.find(h => h.id == holdingId);
   if (!holding) return;
 
-  document.getElementById("sell-quantity").textContent = holding.quantity;
+  const sellQuantityEl = document.getElementById("sell-quantity");
+  if (sellQuantityEl) sellQuantityEl.textContent = holding.quantity;
+
   document.getElementById("sell-quantity-input").value = "";
 
-  try {
-    const res = await fetch(`${API_BASE}/price/${holding.ticker}`);
-    if (res.ok) {
-      const data = await res.json();
-      document.getElementById("sell-price").textContent = `$${data.price.toFixed(2)}`;
-    }
-  } catch (err) {
-    console.error("Error fetching price:", err);
-    document.getElementById("sell-price").textContent = "-";
-  }
+  const averagePrice = getPortfolioAvgPrice(holding.ticker, holdingsData);
+  document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
 });
 
 document.getElementById("ticker").addEventListener("change", async (e) => {
@@ -119,34 +363,39 @@ document.getElementById("ticker").addEventListener("change", async (e) => {
     if (res.ok) {
       const data = await res.json();
       priceDisplay.textContent = `$${data.price.toFixed(2)}`;
+    } else {
+      priceDisplay.textContent = "Unavailable";
+      alert(`Could not fetch a price for ${ticker}. Please try again.`);
     }
   } catch (err) {
     console.error("Error fetching price:", err);
-    priceDisplay.textContent = "-";
+    priceDisplay.textContent = "Unavailable";
+    alert(`Could not fetch a price for ${ticker}. Please try again.`);
   }
 });
 
 document.getElementById("holding-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const body = {
-    ticker: document.getElementById("ticker").value,
-    quantity: parseFloat(document.getElementById("quantity").value),
-    purchase_price: parseFloat(document.getElementById("purchase_price").textContent.replace("$", "")),
-  };
+  const ticker = document.getElementById("ticker").value;
+  const quantity = parseFloat(document.getElementById("quantity").value);
+  const purchasePrice = parseFloat(document.getElementById("purchase_price").textContent.replace("$", ""));
+  const purchaseDate = getTodayDate();
 
-  const purchaseDate = document.getElementById("purchase_date").value;
-  if (purchaseDate) body.purchase_date = purchaseDate;
+  if (!ticker || !quantity || !purchasePrice) {
+    return;
+  }
 
-  await fetch(`${API_BASE}/holdings`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  e.target.reset();
-  document.getElementById("purchase_price").textContent = "-";
-  loadPortfolio();
+  try {
+    await buyStock(ticker, quantity, purchasePrice, purchaseDate);
+    e.target.reset();
+    document.getElementById("purchase_price").textContent = "-";
+    resetHistoryFilter();
+    await loadPortfolio();
+  } catch (err) {
+    console.error("Buy failed:", err);
+    alert(err.message);
+  }
 });
 
 document.getElementById("sell-form").addEventListener("submit", async (e) => {
@@ -154,7 +403,7 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
 
   const holdingId = document.getElementById("sell-ticker").value;
   const quantity = parseFloat(document.getElementById("sell-quantity-input").value);
-  const sellDate = document.getElementById("sell_date").value;
+  const sellDate = getTodayDate();
 
   if (!holdingId || !quantity || quantity <= 0) return;
 
@@ -165,7 +414,52 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   await fetch(url, { method: "DELETE" });
 
   e.target.reset();
+  resetHistoryFilter();
   loadPortfolio();
 });
 
-loadPortfolio();
+document.getElementById("refresh-data-btn").addEventListener("click", () => loadPortfolio());
+document.getElementById("history-filter-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const filters = {};
+  const action = document.getElementById("history-filter-action").value.trim();
+  const ticker = document.getElementById("history-filter-ticker").value.trim();
+  const quantityOperator = document.getElementById("history-filter-quantity-operator").value;
+  const quantityValue = document.getElementById("history-filter-quantity").value.trim();
+  const priceOperator = document.getElementById("history-filter-price-operator").value;
+  const priceValue = document.getElementById("history-filter-price").value.trim();
+  const priceRange = document.getElementById("history-filter-price-range").value;
+  const year = document.getElementById("history-filter-year").value.trim();
+
+  if (action) filters.action = action;
+  if (ticker) filters.ticker = ticker;
+  if (quantityOperator && quantityValue) filters.quantity = `${quantityOperator}${quantityValue}`;
+  if (priceOperator && priceValue) {
+    const normalizedPrice = Number(priceValue).toString();
+    filters.price = `${priceOperator}${normalizedPrice}`;
+  }
+  if (priceRange) filters.price_range = priceRange;
+  if (year) filters.year = year;
+
+  if (Object.keys(filters).length === 0) {
+    await loadPortfolio();
+    return;
+  }
+
+  await loadPortfolio(filters);
+});
+
+document.getElementById("clear-filter-btn").addEventListener("click", async () => {
+  resetHistoryFilter();
+  await loadPortfolio();
+});
+
+// Handle date and load data as soon as the page is ready
+window.addEventListener("DOMContentLoaded", () => {
+  const currentDateEl = document.getElementById("current-date");
+  if (currentDateEl) {
+    currentDateEl.textContent = getTodayDate();
+  }
+  loadPortfolio();
+});

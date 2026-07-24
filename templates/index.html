@@ -3,22 +3,86 @@
 <head>
   <meta charset="UTF-8" />
   <title>Portfolio Manager</title>
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <header>
+  <header class="dashboard-header">
+  <div>
     <h1>My Portfolio</h1>
-    <div id="portfolio-summary">
-      <div id="total-value">Total Value: <strong>$0.00</strong></div>
-      <div id="total-shares">Total Shares: <strong>0</strong></div>
+    <p class="text-muted">
+      Track your investments, holdings, and performance
+    </p>
+  </div>
+
+    
+    <div id="portfolio-summary" class="row row-cards mb-4">
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="text-muted">Total Value</div>
+            <div id="total-value" class="h2 mb-0">
+              <strong>$0.00</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="text-muted">Total Shares</div>
+            <div id="total-shares" class="h2 mb-0">
+              <strong>0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="text-muted">Number of Holdings</div>
+            <div id="total-holdings" class="h2 mb-0">
+              <strong>0</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-3">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="text-muted">Gain/Loss</div>
+            <div id="total-gain-loss" class="h2 mb-0">
+              <strong>$0.00 (0.00%)</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+    <div id="date-time">
+      <div id="date">
+        <p>Date: </p><span id="current-date"></span>
+      </div>
+      <span id="current-time"></span>
     </div>
   </header>
 
   <main>
-    <section id="add-holding">
-      <h2>Buy Stock</h2>
-      <form id="holding-form">
-        <select id="ticker" required>
+
+    <section id="add-holding" class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title">Buy Stock</h2>
+
+    <form id="holding-form" class="row g-3">
+
+      <div class="col-md-4">
+        <label class="form-label">Stock</label>
+        <select id="ticker" class="form-select" required>
           <option value="">Select a ticker...</option>
           <option value="AAPL">AAPL - Apple</option>
           <option value="GOOGL">GOOGL - Google</option>
@@ -29,61 +93,151 @@
           <option value="NVDA">NVDA - NVIDIA</option>
           <option value="SPY">SPY - S&P 500 ETF</option>
         </select>
-        <input type="number" id="quantity" placeholder="Quantity" step="any" required />
-        <div id="buy-details">
-          <div id="buy-price-display">Current Price: <strong id="purchase_price">-</strong></div>
-        </div>
-        <input type="date" id="purchase_date" />
-        <button type="submit">Buy</button>
-      </form>
-    </section>
+      </div>
 
-    <section id="sell-holding">
-      <h2>Sell Stock</h2>
-      <form id="sell-form">
-        <select id="sell-ticker" required>
+      <div class="col-md-3">
+        <label class="form-label">Quantity</label>
+        <input 
+          type="number" 
+          id="quantity" 
+          class="form-control"
+          placeholder="Quantity" 
+          step="any" 
+          required 
+        />
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Current Price</label>
+        <div id="buy-details" class="form-control bg-light">
+          <div id="buy-price-display">
+            <strong id="purchase_price">-</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-2 d-flex align-items-end">
+        <button id="buy-btn" class="btn btn-success w-100" type="submit">
+          Buy
+        </button>
+      </div>
+
+    </form>
+  </div>
+</section>
+
+
+<section id="sell-holding" class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title">Sell Stock</h2>
+
+    <form id="sell-form" class="row g-3">
+
+      <div class="col-md-4">
+        <label class="form-label">Stock</label>
+        <select id="sell-ticker" class="form-select" required>
           <option value="">Select a stock to sell...</option>
         </select>
-        <input type="number" id="sell-quantity-input" placeholder="Quantity to sell" step="any" required />
-        <div id="sell-details">
-          <div id="sell-price-display">Current Price: <strong id="sell-price">-</strong></div>
-        </div>
-        <input type="date" id="sell_date" />
-        <button type="submit">Sell</button>
-      </form>
-    </section>
+      </div>
 
-    <section id="portfolio">
-      <h2>Portfolio</h2>
-      <table id="consolidated-table">
+      <div class="col-md-3">
+        <label class="form-label">Quantity</label>
+        <input 
+          type="number" 
+          id="sell-quantity-input"
+          class="form-control"
+          placeholder="Quantity to sell"
+          step="any"
+          required
+        />
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Details</label>
+        <div id="sell-details" class="form-control bg-light">
+          <div id="sell-quantity-display">
+            Available:
+            <strong id="sell-quantity">-</strong>
+          </div>
+          <div id="sell-price-display">
+            Current Price:
+            <strong id="sell-price">-</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-2 d-flex align-items-end">
+        <button id="sell-btn" class="btn btn-danger w-100" type="submit">
+          Sell
+        </button>
+      </div>
+
+    </form>
+  </div>
+</section>
+
+    <section id="portfolio" class="card mb-4">
+  <div class="card-body">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h2 class="card-title mb-0">Portfolio</h2>
+
+      <button id="refresh-data-btn" type="button" class="btn btn-outline-primary">
+        Refresh Data
+      </button>
+    </div>
+
+    <div class="table-responsive">
+      <table id="consolidated-table" class="table table-vcenter table-striped">
         <thead>
           <tr>
             <th>Ticker</th>
             <th>Quantity</th>
             <th>Avg Price</th>
+            <th>Total Value</th>
+            <th>Gain/Loss</th>
           </tr>
         </thead>
-        <tbody id="consolidated-body"></tbody>
+        <tbody id="consolidated-body">
+            <tr class="empty-state">
+              <td colspan="5">No portfolio data yet.</td>
+            </tr>        
+        </tbody>
       </table>
-    </section>
+    </div>
+    <div id="portfolio-chart-container" class="mt-4">
+      <canvas id="portfolio-pie-chart"></canvas>
+    </div>
+  </div>
+</section>
 
-    <section id="history">
-      <h2>Transaction History</h2>
-      <table id="history-table">
+<section id="history" class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title mb-3">Transaction History</h2>
+    <div class="table-responsive">
+      <table id="history-table" class="table table-vcenter table-striped">
+
         <thead>
           <tr>
             <th>Action</th>
             <th>Ticker</th>
             <th>Quantity</th>
-            <th>Price</th>
+            <th>Price/Share</th>
+            <th>Total Value</th>
             <th>Date</th>
           </tr>
         </thead>
-        <tbody id="history-body"></tbody>
-      </table>
-    </section>
-  </main>
 
+
+        <tbody id="history-body"></tbody>
+
+      </table>
+    </div>
+
+  </div>
+</section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>
 </html>
