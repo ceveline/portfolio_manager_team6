@@ -218,11 +218,25 @@
     <form id="history-filter-form" class="row g-3 mb-3">
       <div class="col-md-2">
         <label class="form-label">Action</label>
-        <input type="text" id="history-filter-action" class="form-control" placeholder="buy/sell" />
+        <select id="history-filter-action" class="form-control">
+          <option value="">All</option>
+          <option value="buy">Buy</option>
+          <option value="sell">Sell</option>
+        </select>
       </div>
       <div class="col-md-2">
         <label class="form-label">Ticker</label>
-        <input type="text" id="history-filter-ticker" class="form-control" placeholder="AAPL" />
+        <!-- <input type="text" id="history-filter-ticker" class="form-control" placeholder="AAPL" /> -->
+         <select id="history-filter-ticker" class="form-control">
+          <option value="aapl">AAPL</option>
+          <option value="googl">GOOGL</option>
+          <option value="msft">MSFT</option>
+          <option value="tsla">TSLA</option>
+          <option value="meta">META</option>
+          <option value="amzn">AMZN</option>
+          <option value="nvda">NVDA</option>
+          <option value="spy">SPY</option>
+        </select>
       </div>
       <div class="col-md-2">
         <label class="form-label">Qty</label>
