@@ -4,3 +4,4 @@ flasgger==0.9.7.1
 pytest==8.2.2
 yfinance==0.2.41
 requests==2.31.0
+curl-cffi>=0.7.3
