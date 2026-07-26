@@ -4,17 +4,32 @@
   <meta charset="UTF-8" />
   <title>Portfolio Manager</title>
   <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <header class="dashboard-header">
-  <div>
-    <h1>My Portfolio</h1>
-    <p class="text-muted">
-      Track your investments, holdings, and performance
-    </p>
+ <header class="dashboard-header">
+
+  <div class="header-top">
+    <div>
+      <h1>My Portfolio</h1>
+      <p class="text-muted">
+        Track your investments, holdings, and performance
+      </p>
+    </div>
+
+    <div class="profile-section">
+      <div class="profile-avatar">
+        DS
+      </div>
+      <div>
+        <div class="profile-name">John Doe</div>
+        <div class="text-muted">Portfolio Manager</div>
+      </div>
+    </div>
   </div>
+
 
     
     <div id="portfolio-summary" class="row row-cards mb-4">
@@ -22,10 +37,16 @@
   <div class="col-md-3">
     <div class="card">
       <div class="card-body">
-        <div class="text-muted">Total Value</div>
-        <div id="total-value" class="h2 mb-0">
-          <strong>$0.00</strong>
-        </div>
+
+      <div class="metric-label">
+  <i class="ti ti-wallet"></i>
+  <div class="text-muted">Total Value</div>
+</div>
+
+<div id="total-value" class="h2 mb-0">
+  <strong>$0.00</strong>
+</div>
+        
       </div>
     </div>
   </div>
@@ -33,10 +54,16 @@
   <div class="col-md-3">
     <div class="card">
       <div class="card-body">
-        <div class="text-muted">Total Shares</div>
-        <div id="total-shares" class="h2 mb-0">
-          <strong>0</strong>
-        </div>
+
+      <div class="metric-label">
+  <i class="ti ti-stack"></i>
+  <div class="text-muted">Total Shares</div>
+</div>
+
+<div id="total-shares" class="h2 mb-0">
+  <strong>0</strong>
+</div>  
+
       </div>
     </div>
   </div>
@@ -44,10 +71,17 @@
   <div class="col-md-3">
     <div class="card">
       <div class="card-body">
-        <div class="text-muted">Number of Holdings</div>
-        <div id="total-holdings" class="h2 mb-0">
-          <strong>0</strong>
-        </div>
+
+        <div class="metric-label">
+  <i class="ti ti-building-bank"></i>
+  <div class="text-muted">Number of Holdings</div>
+</div>
+
+<div id="total-holdings" class="h2 mb-0">
+  <strong>0</strong>
+</div>
+
+
       </div>
     </div>
   </div>
@@ -55,10 +89,18 @@
   <div class="col-md-3">
     <div class="card">
       <div class="card-body">
-        <div class="text-muted">Gain/Loss</div>
-        <div id="total-gain-loss" class="h2 mb-0">
-          <strong>$0.00 (0.00%)</strong>
-        </div>
+
+        
+        <div class="metric-label">
+  <i class="ti ti-chart-line"></i>
+  <div class="text-muted">Gain/Loss</div>
+</div>
+
+<div id="total-gain-loss" class="h2 mb-0">
+  <strong>$0.00 (0.00%)</strong>
+</div>
+
+
       </div>
     </div>
   </div>
@@ -71,6 +113,7 @@
         <p>Date: </p><span id="current-date"></span>
       </div>
       <span id="current-time"></span>
+
   </header>
 
   <main>

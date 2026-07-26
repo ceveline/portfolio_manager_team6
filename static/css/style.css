@@ -39,17 +39,22 @@ h2 {
   margin-bottom: 2rem;
 }
 
+/* Button polish */
 
-/* Buttons */
-button {
-  cursor: pointer;
+.btn-success {
+  background-color: #16a34a;
+  border-color: #16a34a;
+}
+
+.btn-danger {
+  background-color: #dc2626;
+  border-color: #dc2626;
+}
+
+.btn-outline-primary {
   border-radius: 8px;
-  transition: 0.2s ease;
 }
 
-button:hover {
-  transform: translateY(-1px);
-}
 
 
 /* Forms */
@@ -149,16 +154,16 @@ body {
 
 
 /* Button polish */
-
 .btn-success {
-  background-color: #16a34a;
-  border-color: #16a34a;
+  background-color: #15803d;
+  border-color: #15803d;
 }
 
 .btn-danger {
-  background-color: #dc2626;
-  border-color: #dc2626;
+  background-color: #b91c1c;
+  border-color: #b91c1c;
 }
+
 
 .btn-outline-primary {
   border-radius: 8px;
@@ -188,4 +193,79 @@ main section {
   background: white;
   border-radius: 14px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Premium dashboard polish */
+
+.card {
+  transition: box-shadow 0.2s ease;
+}
+
+
+
+h1 {
+  letter-spacing: -0.5px;
+}
+
+.h2 {
+  font-weight: 700;
+}
+
+/* Enterprise button hover */
+
+.btn-success:hover {
+  background-color: #15803d;
+  border-color: #15803d;
+}
+
+.btn-danger:hover {
+  background-color: #b91c1c;
+  border-color: #b91c1c;
+}
+
+/* Enterprise profile section */
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 3rem;
+  margin-bottom: 1.5rem;
+}
+
+
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background-color: #0f172a;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.profile-name {
+  font-weight: 600;
+  color: #0f172a;
+}
+
+/* Metric icons */
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.metric-label i {
+  font-size: 1.2rem;
+  color: #475569;
 }
