@@ -89,10 +89,7 @@ input {
 
 /* Date and time */
 #portfolio-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin: 0.75rem 0 1rem;
+  margin-bottom: 2rem;
 }
 
 #date-time {
@@ -215,4 +212,52 @@ main section {
 #portfolio-pie-chart {
   max-width: 280px;
   margin-top: 1rem;
+}
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.metric-label i {
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.profile-section {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: #0f172a;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.profile-name {
+  font-weight: 600;
 }
