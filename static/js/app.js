@@ -3,7 +3,7 @@ let holdingsData = [];
 let portfolioPieChart = null;
 let performanceChart = null;
 let portfolioData = [];
-let currentSortColumn = null;
+let currentSortColumn = "ticker"; // Default sort by ticker
 let currentSortDirection = "asc";
 
 async function loadPortfolio(filters = {}) {
@@ -157,9 +157,9 @@ async function loadPortfolioWithSummary() {
       return;
     }
 
-    // Store portfolio data and render with sorting
+    // Store portfolio data and render with default sorting by ticker
     portfolioData = summary.positions;
-    renderPortfolioTable(portfolioData);
+    sortPortfolioTable("ticker"); // Apply default sort
     renderPortfolioPieChart(summary.positions);
   } catch (err) {
     console.error("Error loading portfolio summary:", err);
