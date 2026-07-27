@@ -751,7 +751,7 @@ window.addEventListener("DOMContentLoaded", () => {
 }
 
 loadPortfolio(); // Initial load
-setInterval(refreshPortfolio, 1000);
+setInterval(refreshPortfolio, 60000);
 });
 
 document.addEventListener('DOMContentLoaded', function () {
