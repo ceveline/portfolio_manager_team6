@@ -399,8 +399,8 @@ if (holdingForm) {
     const purchaseDate = getTodayDate();
 
     // Validate quantity
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      alert("Quantity must be a positive number");
+    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
+      alert("Quantity must be a whole number (1, 2, 3, ...)");
       return;
     }
 
@@ -442,8 +442,8 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
     return;
   }
 
-  if (!Number.isFinite(quantity) || quantity <= 0) {
-    alert("Quantity must be a positive number");
+  if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
+    alert("Quantity must be a whole number (1, 2, 3, ...)");
     return;
   }
 
