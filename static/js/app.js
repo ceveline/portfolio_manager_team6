@@ -259,10 +259,24 @@ function populateSellDropdown(holdings) {
   const sellSelect = document.getElementById("sell-ticker");
   sellSelect.innerHTML = '<option value="">Select a stock to sell...</option>';
 
+  // Consolidate holdings by ticker
+  const consolidatedMap = {};
   holdings.forEach((h) => {
+    if (!consolidatedMap[h.ticker]) {
+      consolidatedMap[h.ticker] = {
+        ticker: h.ticker,
+        totalQuantity: 0,
+        firstId: h.id
+      };
+    }
+    consolidatedMap[h.ticker].totalQuantity += Number(h.quantity || 0);
+  });
+
+  // Populate dropdown with consolidated tickers
+  Object.values(consolidatedMap).forEach((consolidated) => {
     const option = document.createElement("option");
-    option.value = h.id;
-    option.textContent = `${h.ticker} (${h.quantity} shares)`;
+    option.value = consolidated.firstId;
+    option.textContent = `${consolidated.ticker} (${consolidated.totalQuantity} shares)`;
     sellSelect.appendChild(option);
   });
 }
@@ -302,8 +316,13 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
   const holding = holdingsData.find(h => h.id == holdingId);
   if (!holding) return;
 
+  // Get total quantity for this ticker (consolidate all holdings with same ticker)
+  const totalQuantity = holdingsData
+    .filter(h => h.ticker === holding.ticker)
+    .reduce((sum, h) => sum + Number(h.quantity || 0), 0);
+
   const sellQuantityEl = document.getElementById("sell-quantity");
-  if (sellQuantityEl) sellQuantityEl.textContent = holding.quantity;
+  if (sellQuantityEl) sellQuantityEl.textContent = totalQuantity;
 
   document.getElementById("sell-quantity-input").value = "";
 
@@ -329,13 +348,19 @@ if (holdingForm) {
     let purchasePrice = getDisplayedPurchasePrice();
     const purchaseDate = getTodayDate();
 
-    if (!ticker || !quantity || !Number.isFinite(purchasePrice)) {
+    // Validate quantity
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      alert("Quantity must be a positive number");
+      return;
+    }
+
+    if (!ticker || !Number.isFinite(purchasePrice)) {
       if (ticker) {
         purchasePrice = await fetchAndDisplayPrice(ticker);
       }
     }
 
-    if (!ticker || !quantity || !Number.isFinite(purchasePrice)) {
+    if (!ticker || !Number.isFinite(purchasePrice)) {
       return;
     }
 
@@ -360,7 +385,28 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   const quantity = parseFloat(document.getElementById("sell-quantity-input").value);
   const sellDate = getTodayDate();
 
-  if (!holdingId || !quantity || quantity <= 0) return;
+  if (!holdingId) {
+    alert("Please select a stock to sell");
+    return;
+  }
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    alert("Quantity must be a positive number");
+    return;
+  }
+
+  // Get the holding to check available quantity
+  const holding = holdingsData.find(h => h.id == holdingId);
+  if (holding) {
+    const availableQuantity = holdingsData
+      .filter(h => h.ticker === holding.ticker)
+      .reduce((sum, h) => sum + Number(h.quantity || 0), 0);
+
+    if (quantity > availableQuantity) {
+      alert(`Cannot sell ${quantity} shares. Only ${availableQuantity} shares available.`);
+      return;
+    }
+  }
 
   const url = new URL(`${API_BASE}/holdings/${holdingId}`, window.location.origin);
   url.searchParams.append("quantity", quantity);
