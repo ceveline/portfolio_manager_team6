@@ -5,6 +5,7 @@ let performanceChart = null;
 let portfolioData = [];
 let currentSortColumn = null;
 let currentSortDirection = "asc";
+let availableQuantities = {}; // Map of ticker to total available quantity
 
 async function loadPortfolio(filters = {}) {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
@@ -307,8 +308,10 @@ function populateSellDropdown(holdings) {
   const sellSelect = document.getElementById("sell-ticker");
   sellSelect.innerHTML = '<option value="">Select a stock to sell...</option>';
 
-  // Consolidate holdings by ticker
+  // Consolidate holdings by ticker and store available quantities
   const consolidatedMap = {};
+  availableQuantities = {}; // Reset available quantities
+
   holdings.forEach((h) => {
     if (!consolidatedMap[h.ticker]) {
       consolidatedMap[h.ticker] = {
@@ -320,11 +323,14 @@ function populateSellDropdown(holdings) {
     consolidatedMap[h.ticker].totalQuantity += Number(h.quantity || 0);
   });
 
-  // Populate dropdown with consolidated tickers
+  // Store available quantities and populate dropdown
   Object.values(consolidatedMap).forEach((consolidated) => {
+    availableQuantities[consolidated.ticker] = consolidated.totalQuantity;
     const option = document.createElement("option");
     option.value = consolidated.firstId;
     option.textContent = `${consolidated.ticker} (${consolidated.totalQuantity} shares)`;
+    option.dataset.ticker = consolidated.ticker;
+    option.dataset.availableQuantity = consolidated.totalQuantity;
     sellSelect.appendChild(option);
   });
 }
@@ -361,13 +367,9 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
     return;
   }
 
-  const holding = holdingsData.find(h => h.id == holdingId);
-  if (!holding) return;
-
-  // Get total quantity for this ticker (consolidate all holdings with same ticker)
-  const totalQuantity = holdingsData
-    .filter(h => h.ticker === holding.ticker)
-    .reduce((sum, h) => sum + Number(h.quantity || 0), 0);
+  const selectedOption = e.target.options[e.target.selectedIndex];
+  const ticker = selectedOption.dataset.ticker;
+  const totalQuantity = availableQuantities[ticker] || 0;
 
   const sellQuantityEl = document.getElementById("sell-quantity");
   if (sellQuantityEl) sellQuantityEl.textContent = totalQuantity;
@@ -430,6 +432,8 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const holdingId = document.getElementById("sell-ticker").value;
+  const selectedOption = document.querySelector(`#sell-ticker option[value="${holdingId}"]`);
+  const ticker = selectedOption?.dataset.ticker;
   const quantity = parseFloat(document.getElementById("sell-quantity-input").value);
   const sellDate = getTodayDate();
 
@@ -443,17 +447,11 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
     return;
   }
 
-  // Get the holding to check available quantity
-  const holding = holdingsData.find(h => h.id == holdingId);
-  if (holding) {
-    const availableQuantity = holdingsData
-      .filter(h => h.ticker === holding.ticker)
-      .reduce((sum, h) => sum + Number(h.quantity || 0), 0);
-
-    if (quantity > availableQuantity) {
-      alert(`Cannot sell ${quantity} shares. Only ${availableQuantity} shares available.`);
-      return;
-    }
+  // Use the stored available quantity from dropdown
+  const availableQuantity = availableQuantities[ticker] || 0;
+  if (quantity > availableQuantity) {
+    alert(`Cannot sell ${quantity} shares. Only ${availableQuantity} shares available.`);
+    return;
   }
 
   const url = new URL(`${API_BASE}/holdings/${holdingId}`, window.location.origin);
