@@ -346,3 +346,34 @@ main section {
   font-weight: 600;
   line-height: 1.2;
 }
+/* Sortable table headers */
+th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+th.sortable:hover {
+  background-color: #e2e8f0 !important;
+}
+
+.sort-indicator {
+  display: inline-block;
+  width: 1em;
+  text-align: center;
+  font-size: 0.75em;
+  vertical-align: middle;
+  margin-left: 4px;
+}
+
+th.sortable.asc .sort-indicator::after {
+  content: "↑";
+  color: #0f172a;
+  font-weight: bold;
+}
+
+th.sortable.desc .sort-indicator::after {
+  content: "↓";
+  color: #0f172a;
+  font-weight: bold;
+}
