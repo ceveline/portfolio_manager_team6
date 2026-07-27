@@ -64,12 +64,14 @@ def _fetch_current_price(ticker):
     # plain yf.Ticker() call tends to fail for any ticker, not just
     # obscure ones)
     try:
-        stock = yf.Ticker(ticker_upper, session=_yf_session)
+        stock = yf.Ticker(ticker_upper)
         hist = stock.history(period="1d")
-        if len(hist) > 0:
+
+        if not hist.empty:
             return float(hist["Close"].iloc[-1])
-    except Exception:
-        pass
+
+    except Exception as e:
+        print("Yahoo Finance failed:", e)
 
     return None
 
@@ -104,6 +106,7 @@ def get_stock_price(ticker):
     }
 )
 def list_holdings():
+    print("Holdings requested at", datetime.now())
     holdings = Holding.query.all()
     return jsonify([h.to_dict() for h in holdings]), 200
 
