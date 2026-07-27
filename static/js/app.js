@@ -7,10 +7,9 @@ let currentSortColumn = "ticker"; // Default sort by ticker
 let currentSortDirection = "asc";
 let availableQuantities = {}; // Map of ticker to total available quantity
 let historyData = []; // Store transaction data for sorting
+let sortedHistoryData = []; // Store currently sorted transaction data for pagination
 let currentHistorySortColumn = "transaction_date"; // Default sort by date
 let currentHistorySortDirection = "desc"; // Descending for most recent first
-
-let historyData = [];
 let historyCurrentPage = 1;
 const historyRowsPerPage = 5;
 
@@ -290,33 +289,6 @@ function renderPortfolioPieChart(positions) {
 }
 
 function loadHistory(history) {
-  historyData = history;
-  historyCurrentPage = 1;
-  renderHistoryPage();
-}
-
-function renderHistoryPage() {
-  const tbody = document.getElementById("history-body");
-  tbody.innerHTML = "";
-
-  if (!historyData.length) {
-    tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
-    return;
-  }
-
-  const start = (historyCurrentPage - 1) * historyRowsPerPage;
-  const end = start + historyRowsPerPage;
-
-  const pageData = historyData.slice(start, end);
-
-  pageData.forEach((t) => {
-    const row = document.createElement("tr");
-
-    const action = t.action.charAt(0).toUpperCase() + t.action.slice(1);
-    const pricePerShare = Number(t.price || 0);
-    const quantity = Number(t.quantity || 0);
-    const totalValue = quantity * pricePerShare;
-
   if (!history.length) {
     const tbody = document.getElementById("history-body");
     tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
@@ -333,7 +305,7 @@ function renderHistoryPage() {
   }));
 
   // Apply default sort by date, descending
-  sortTransactionTable("transaction_date", true);
+  sortTransactionTable("transaction_date");
 }
 
 function renderTransactionTable(transactions) {
@@ -345,7 +317,12 @@ function renderTransactionTable(transactions) {
     return;
   }
 
-  transactions.forEach((t) => {
+  // Paginate the transactions
+  const start = (historyCurrentPage - 1) * historyRowsPerPage;
+  const end = start + historyRowsPerPage;
+  const pageData = transactions.slice(start, end);
+
+  pageData.forEach((t) => {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${t.action}</td>
@@ -355,18 +332,18 @@ function renderTransactionTable(transactions) {
       <td>$${t.totalValue.toFixed(2)}</td>
       <td>${t.transaction_date}</td>
     `;
-
     tbody.appendChild(row);
   });
 
-  updateHistoryPagination();
+  updateHistoryPagination(transactions.length);
 }
-function updateHistoryPagination() {
+
+function updateHistoryPagination(totalItems) {
   const pageNumber = document.getElementById("history-page-number");
   const prevButton = document.getElementById("history-prev-btn");
   const nextButton = document.getElementById("history-next-btn");
 
-  const totalPages = Math.ceil(historyData.length / historyRowsPerPage);
+  const totalPages = Math.ceil(totalItems / historyRowsPerPage);
 
   if (pageNumber) {
     pageNumber.textContent = `Page ${historyCurrentPage} of ${totalPages}`;
@@ -381,13 +358,17 @@ function updateHistoryPagination() {
   }
 }
 
-function sortTransactionTable(column, isInitialSort = false) {
-  if (!isInitialSort && currentHistorySortColumn === column) {
+function sortTransactionTable(column) {
+  if (currentHistorySortColumn === column) {
     currentHistorySortDirection = currentHistorySortDirection === "asc" ? "desc" : "asc";
   } else {
     currentHistorySortColumn = column;
-    currentHistorySortDirection = isInitialSort ? "desc" : "asc";
+    // Keep default desc direction for date column, asc for others
+    currentHistorySortDirection = column === "transaction_date" ? "desc" : "asc";
   }
+
+  // Reset to first page when sorting
+  historyCurrentPage = 1;
 
   // Update header indicators in history table
   const historyBody = document.getElementById("history-body");
@@ -402,7 +383,7 @@ function sortTransactionTable(column, isInitialSort = false) {
   }
 
   // Sort data
-  const sorted = [...historyData].sort((a, b) => {
+  sortedHistoryData = [...historyData].sort((a, b) => {
     let aVal = a[column];
     let bVal = b[column];
 
@@ -421,7 +402,7 @@ function sortTransactionTable(column, isInitialSort = false) {
     return currentHistorySortDirection === "asc" ? aVal - bVal : bVal - aVal;
   });
 
-  renderTransactionTable(sorted);
+  renderTransactionTable(sortedHistoryData);
 }
 
 function populateSellDropdown(holdings) {
@@ -863,27 +844,27 @@ window.addEventListener("DOMContentLoaded", () => {
   loadPerformanceChart(startDate, endDate);
 
   const prevButton = document.getElementById("history-prev-btn");
-const nextButton = document.getElementById("history-next-btn");
+  const nextButton = document.getElementById("history-next-btn");
 
-if (prevButton) {
-  prevButton.addEventListener("click", () => {
-    if (historyCurrentPage > 1) {
-      historyCurrentPage--;
-      renderHistoryPage();
-    }
-  });
-}
+  if (prevButton) {
+    prevButton.addEventListener("click", () => {
+      if (historyCurrentPage > 1) {
+        historyCurrentPage--;
+        renderTransactionTable(sortedHistoryData);
+      }
+    });
+  }
 
-if (nextButton) {
-  nextButton.addEventListener("click", () => {
-    const totalPages = Math.ceil(historyData.length / historyRowsPerPage);
+  if (nextButton) {
+    nextButton.addEventListener("click", () => {
+      const totalPages = Math.ceil(sortedHistoryData.length / historyRowsPerPage);
 
-    if (historyCurrentPage < totalPages) {
-      historyCurrentPage++;
-      renderHistoryPage();
-    }
-  });
-}
+      if (historyCurrentPage < totalPages) {
+        historyCurrentPage++;
+        renderTransactionTable(sortedHistoryData);
+      }
+    });
+  }
   let refreshing = false;
 
   async function refreshPortfolio() {
