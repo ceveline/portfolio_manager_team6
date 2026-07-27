@@ -89,10 +89,7 @@ input {
 
 /* Date and time */
 #portfolio-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin: 0.75rem 0 1rem;
+  margin-bottom: 2rem;
 }
 
 #date-time {
@@ -136,11 +133,30 @@ input {
   margin-bottom: 2rem;
 }
 
-.dashboard-header h1 {
-  margin-bottom: 0.25rem;
+/* Portfolio header banner */
+
+.header-top {
+  background: white;
+  padding: 1.5rem 2rem;
+  border-radius: 18px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
 }
 
-.dashboard-header p {
+.header-banner h1 {
+  color: white;
+  font-size: 2.8rem;
+  font-weight: 800;
+  margin-bottom: 0.5rem;
+  letter-spacing: -1px;
+}
+.header-banner p {
+  color: #64748b !important;
   margin: 0;
   font-size: 1rem;
 }
@@ -213,6 +229,120 @@ main section {
 }
 
 #portfolio-pie-chart {
-  max-width: 280px;
-  margin-top: 1rem;
+  display: block;
+  width: 280px !important;
+  height: 280px !important;
+  margin: 1rem auto;
+}
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.metric-label i {
+  font-size: 1.2rem;
+  color: #0f172a;
+}
+
+
+.metric-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+
+.profile-section {
+  display: flex;
+  align-items: center;
+}
+
+.profile-top {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+
+
+.support-link {
+  margin-top: 0.25rem;
+  cursor: pointer;
+}
+
+
+
+.profile-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: #0f172a;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+.profile-name {
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+/* ===== Top Company Banner ===== */
+
+.top-banner{
+    background: linear-gradient(90deg,#0f172a,#1e293b);
+    padding:18px 32px;
+    margin:-2rem -2rem 2rem -2rem;
+}
+
+.top-banner-content{
+    max-width:1200px;
+    margin:auto;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
+
+.company-logo{
+    color:white;
+    font-size:1.5rem;
+    font-weight:700;
+    display:flex;
+    align-items:center;
+    gap:10px;
+}
+
+.company-logo i{
+    font-size:1.8rem;
+}
+
+.company-subtitle{
+    color:#cbd5e1;
+    font-size:.95rem;
+    letter-spacing:.5px;
+}
+
+
+
+
+
+.profile-details {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.profile-name {
+  font-weight: 600;
+  line-height: 1.2;
 }
