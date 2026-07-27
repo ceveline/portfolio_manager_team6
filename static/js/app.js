@@ -6,6 +6,10 @@ let portfolioData = [];
 let currentSortColumn = null;
 let currentSortDirection = "asc";
 
+let historyData = [];
+let historyCurrentPage = 1;
+const historyRowsPerPage = 5;
+
 async function loadPortfolio(filters = {}) {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
   const holdings = await holdingsRes.json();
@@ -277,20 +281,33 @@ function renderPortfolioPieChart(positions) {
 }
 
 function loadHistory(history) {
+  historyData = history;
+  historyCurrentPage = 1;
+  renderHistoryPage();
+}
+
+function renderHistoryPage() {
   const tbody = document.getElementById("history-body");
   tbody.innerHTML = "";
 
-  if (!history.length) {
+  if (!historyData.length) {
     tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
     return;
   }
 
-  history.forEach((t) => {
+  const start = (historyCurrentPage - 1) * historyRowsPerPage;
+  const end = start + historyRowsPerPage;
+
+  const pageData = historyData.slice(start, end);
+
+  pageData.forEach((t) => {
     const row = document.createElement("tr");
+
     const action = t.action.charAt(0).toUpperCase() + t.action.slice(1);
     const pricePerShare = Number(t.price || 0);
     const quantity = Number(t.quantity || 0);
     const totalValue = quantity * pricePerShare;
+
     row.innerHTML = `
       <td>${action}</td>
       <td>${t.ticker}</td>
@@ -299,9 +316,32 @@ function loadHistory(history) {
       <td>$${totalValue.toFixed(2)}</td>
       <td>${t.transaction_date}</td>
     `;
+
     tbody.appendChild(row);
   });
+
+  updateHistoryPagination();
 }
+function updateHistoryPagination() {
+  const pageNumber = document.getElementById("history-page-number");
+  const prevButton = document.getElementById("history-prev-btn");
+  const nextButton = document.getElementById("history-next-btn");
+
+  const totalPages = Math.ceil(historyData.length / historyRowsPerPage);
+
+  if (pageNumber) {
+    pageNumber.textContent = `Page ${historyCurrentPage} of ${totalPages}`;
+  }
+
+  if (prevButton) {
+    prevButton.disabled = historyCurrentPage === 1;
+  }
+
+  if (nextButton) {
+    nextButton.disabled = historyCurrentPage === totalPages;
+  }
+}
+
 
 function populateSellDropdown(holdings) {
   const sellSelect = document.getElementById("sell-ticker");
@@ -737,4 +777,27 @@ window.addEventListener("DOMContentLoaded", () => {
   const startDate = document.getElementById("perf-start-date").value;
   const endDate = document.getElementById("perf-end-date").value;
   loadPerformanceChart(startDate, endDate);
+
+  const prevButton = document.getElementById("history-prev-btn");
+const nextButton = document.getElementById("history-next-btn");
+
+if (prevButton) {
+  prevButton.addEventListener("click", () => {
+    if (historyCurrentPage > 1) {
+      historyCurrentPage--;
+      renderHistoryPage();
+    }
+  });
+}
+
+if (nextButton) {
+  nextButton.addEventListener("click", () => {
+    const totalPages = Math.ceil(historyData.length / historyRowsPerPage);
+
+    if (historyCurrentPage < totalPages) {
+      historyCurrentPage++;
+      renderHistoryPage();
+    }
+  });
+}
 });
