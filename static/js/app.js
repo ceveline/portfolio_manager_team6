@@ -2,6 +2,10 @@ const API_BASE = "/api";
 let holdingsData = [];
 let portfolioPieChart = null;
 let performanceChart = null;
+let portfolioData = [];
+let currentSortColumn = null;
+let currentSortDirection = "asc";
+let availableQuantities = {}; // Map of ticker to total available quantity
 
 async function loadPortfolio(filters = {}) {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
@@ -129,9 +133,6 @@ async function loadPortfolioWithSummary() {
     if (!res.ok) throw new Error("Failed to load summary");
     const summary = await res.json();
 
-    const tbody = document.getElementById("consolidated-body");
-    tbody.innerHTML = "";
-
     document.querySelector("#portfolio-cost-basis").textContent = `$${summary.total_cost_basis.toFixed(2)}`;
     document.querySelector("#portfolio-market-value").textContent = `$${summary.total_market_value.toFixed(2)}`;
     document.querySelector("#portfolio-unrealized-pnl").textContent = `$${summary.total_unrealized_pnl.toFixed(2)}`;
@@ -151,34 +152,82 @@ async function loadPortfolioWithSummary() {
       `${sign}$${summary.total_unrealized_pnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
 
     if (!summary.positions || summary.positions.length === 0) {
+      const tbody = document.getElementById("consolidated-body");
       tbody.innerHTML = '<tr class="empty-state"><td colspan="8">No portfolio data yet.</td></tr>';
       renderPortfolioPieChart([]);
       return;
     }
 
-    summary.positions.forEach((pos) => {
-      const row = document.createElement("tr");
-      const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
-      const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
-      const currentPriceStr = pos.current_price !== null ? `$${pos.current_price.toFixed(2)}` : "-";
-
-      row.innerHTML = `
-        <td>${pos.ticker}</td>
-        <td>${pos.shares_held}</td>
-        <td>$${pos.avg_cost.toFixed(2)}</td>
-        <td>${currentPriceStr}</td>
-        <td>$${pos.cost_basis.toFixed(2)}</td>
-        <td>${marketValueStr}</td>
-        <td>${unrealizedPnlStr}</td>
-        <td>$${pos.realized_pnl.toFixed(2)}</td>
-      `;
-      tbody.appendChild(row);
-    });
-
+    // Store portfolio data and render with sorting
+    portfolioData = summary.positions;
+    renderPortfolioTable(portfolioData);
     renderPortfolioPieChart(summary.positions);
   } catch (err) {
     console.error("Error loading portfolio summary:", err);
   }
+}
+
+function renderPortfolioTable(positions) {
+  const tbody = document.getElementById("consolidated-body");
+  tbody.innerHTML = "";
+
+  positions.forEach((pos) => {
+    const row = document.createElement("tr");
+    const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
+    const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
+    const currentPriceStr = pos.current_price !== null ? `$${pos.current_price.toFixed(2)}` : "-";
+
+    row.innerHTML = `
+      <td>${pos.ticker}</td>
+      <td>${pos.shares_held}</td>
+      <td>$${pos.avg_cost.toFixed(2)}</td>
+      <td>${currentPriceStr}</td>
+      <td>$${pos.cost_basis.toFixed(2)}</td>
+      <td>${marketValueStr}</td>
+      <td>${unrealizedPnlStr}</td>
+      <td>$${pos.realized_pnl.toFixed(2)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function sortPortfolioTable(column) {
+  if (currentSortColumn === column) {
+    currentSortDirection = currentSortDirection === "asc" ? "desc" : "asc";
+  } else {
+    currentSortColumn = column;
+    currentSortDirection = "asc";
+  }
+
+  // Update header indicators
+  document.querySelectorAll("th.sortable").forEach(th => {
+    th.classList.remove("asc", "desc");
+    if (th.dataset.sort === column) {
+      th.classList.add(currentSortDirection);
+    }
+  });
+
+  // Sort data
+  const sorted = [...portfolioData].sort((a, b) => {
+    let aVal = a[column];
+    let bVal = b[column];
+
+    // Handle null values
+    if (aVal === null) aVal = -Infinity;
+    if (bVal === null) bVal = -Infinity;
+
+    // String comparison for ticker
+    if (typeof aVal === "string") {
+      return currentSortDirection === "asc"
+        ? aVal.localeCompare(bVal)
+        : bVal.localeCompare(aVal);
+    }
+
+    // Numeric comparison
+    return currentSortDirection === "asc" ? aVal - bVal : bVal - aVal;
+  });
+
+  renderPortfolioTable(sorted);
 }
 
 function renderPortfolioPieChart(positions) {
@@ -259,10 +308,29 @@ function populateSellDropdown(holdings) {
   const sellSelect = document.getElementById("sell-ticker");
   sellSelect.innerHTML = '<option value="">Select a stock to sell...</option>';
 
+  // Consolidate holdings by ticker and store available quantities
+  const consolidatedMap = {};
+  availableQuantities = {}; // Reset available quantities
+
   holdings.forEach((h) => {
+    if (!consolidatedMap[h.ticker]) {
+      consolidatedMap[h.ticker] = {
+        ticker: h.ticker,
+        totalQuantity: 0,
+        firstId: h.id
+      };
+    }
+    consolidatedMap[h.ticker].totalQuantity += Number(h.quantity || 0);
+  });
+
+  // Store available quantities and populate dropdown
+  Object.values(consolidatedMap).forEach((consolidated) => {
+    availableQuantities[consolidated.ticker] = consolidated.totalQuantity;
     const option = document.createElement("option");
-    option.value = h.id;
-    option.textContent = `${h.ticker} (${h.quantity} shares)`;
+    option.value = consolidated.firstId;
+    option.textContent = `${consolidated.ticker} (${consolidated.totalQuantity} shares)`;
+    option.dataset.ticker = consolidated.ticker;
+    option.dataset.availableQuantity = consolidated.totalQuantity;
     sellSelect.appendChild(option);
   });
 }
@@ -299,11 +367,12 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
     return;
   }
 
-  const holding = holdingsData.find(h => h.id == holdingId);
-  if (!holding) return;
+  const selectedOption = e.target.options[e.target.selectedIndex];
+  const ticker = selectedOption.dataset.ticker;
+  const totalQuantity = availableQuantities[ticker] || 0;
 
   const sellQuantityEl = document.getElementById("sell-quantity");
-  if (sellQuantityEl) sellQuantityEl.textContent = holding.quantity;
+  if (sellQuantityEl) sellQuantityEl.textContent = totalQuantity;
 
   document.getElementById("sell-quantity-input").value = "";
 
@@ -329,13 +398,19 @@ if (holdingForm) {
     let purchasePrice = getDisplayedPurchasePrice();
     const purchaseDate = getTodayDate();
 
-    if (!ticker || !quantity || !Number.isFinite(purchasePrice)) {
+    // Validate quantity
+    if (!Number.isFinite(quantity) || quantity <= 0) {
+      alert("Quantity must be a positive number");
+      return;
+    }
+
+    if (!ticker || !Number.isFinite(purchasePrice)) {
       if (ticker) {
         purchasePrice = await fetchAndDisplayPrice(ticker);
       }
     }
 
-    if (!ticker || !quantity || !Number.isFinite(purchasePrice)) {
+    if (!ticker || !Number.isFinite(purchasePrice)) {
       return;
     }
 
@@ -357,10 +432,27 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
   const holdingId = document.getElementById("sell-ticker").value;
+  const selectedOption = document.querySelector(`#sell-ticker option[value="${holdingId}"]`);
+  const ticker = selectedOption?.dataset.ticker;
   const quantity = parseFloat(document.getElementById("sell-quantity-input").value);
   const sellDate = getTodayDate();
 
-  if (!holdingId || !quantity || quantity <= 0) return;
+  if (!holdingId) {
+    alert("Please select a stock to sell");
+    return;
+  }
+
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    alert("Quantity must be a positive number");
+    return;
+  }
+
+  // Use the stored available quantity from dropdown
+  const availableQuantity = availableQuantities[ticker] || 0;
+  if (quantity > availableQuantity) {
+    alert(`Cannot sell ${quantity} shares. Only ${availableQuantity} shares available.`);
+    return;
+  }
 
   const url = new URL(`${API_BASE}/holdings/${holdingId}`, window.location.origin);
   url.searchParams.append("quantity", quantity);
@@ -621,6 +713,14 @@ document.querySelectorAll(".perf-period-btn").forEach(btn => {
     document.getElementById("perf-start-date").value = start;
     document.getElementById("perf-end-date").value = end;
     await loadPerformanceChart(start, end);
+  });
+});
+
+// Add sortable header click handlers
+document.querySelectorAll("th.sortable").forEach(th => {
+  th.addEventListener("click", () => {
+    const column = th.dataset.sort;
+    sortPortfolioTable(column);
   });
 });
 
