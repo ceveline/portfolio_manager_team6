@@ -346,3 +346,28 @@ main section {
   font-weight: 600;
   line-height: 1.2;
 }
+
+/* Styling for Filters */
+.filter-symbol {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px; /* Spaces out icon and text */
+  padding: 6px 12px;
+  border: 1px solid #dee2e6; /* Standard Bootstrap border style */
+  border-radius: 4px;
+  background-color: #ffffff;
+  user-select: none;
+  transition: background-color 0.2s;
+  width: 8%;
+  height: 2%;
+}
+
+.filter-symbol:hover {
+  background-color: #f8f9fa; /* Subtle light gray on hover */
+}
+
+/* Optional: change icon color to match modern designs */
+.filter-symbol .ti {
+  font-size: 1.15rem;
+  color: #495057;
+}
