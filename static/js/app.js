@@ -3,7 +3,7 @@ let holdingsData = [];
 let portfolioPieChart = null;
 let performanceChart = null;
 let portfolioData = [];
-let currentSortColumn = null;
+let currentSortColumn = "ticker"; // Default sort by ticker
 let currentSortDirection = "asc";
 let availableQuantities = {}; // Map of ticker to total available quantity
 
@@ -158,9 +158,9 @@ async function loadPortfolioWithSummary() {
       return;
     }
 
-    // Store portfolio data and render with sorting
+    // Store portfolio data and render with default sorting by ticker
     portfolioData = summary.positions;
-    renderPortfolioTable(portfolioData);
+    sortPortfolioTable("ticker"); // Apply default sort
     renderPortfolioPieChart(summary.positions);
   } catch (err) {
     console.error("Error loading portfolio summary:", err);
@@ -399,8 +399,8 @@ if (holdingForm) {
     const purchaseDate = getTodayDate();
 
     // Validate quantity
-    if (!Number.isFinite(quantity) || quantity <= 0) {
-      alert("Quantity must be a positive number");
+    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
+      alert("Quantity must be a whole number (1, 2, 3, ...)");
       return;
     }
 
@@ -442,8 +442,8 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
     return;
   }
 
-  if (!Number.isFinite(quantity) || quantity <= 0) {
-    alert("Quantity must be a positive number");
+  if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
+    alert("Quantity must be a whole number (1, 2, 3, ...)");
     return;
   }
 
