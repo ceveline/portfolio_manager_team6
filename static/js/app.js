@@ -6,6 +6,9 @@ let portfolioData = [];
 let currentSortColumn = "ticker"; // Default sort by ticker
 let currentSortDirection = "asc";
 let availableQuantities = {}; // Map of ticker to total available quantity
+let historyData = []; // Store transaction data for sorting
+let currentHistorySortColumn = "transaction_date"; // Default sort by date
+let currentHistorySortDirection = "desc"; // Descending for most recent first
 
 async function loadPortfolio(filters = {}) {
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
@@ -199,13 +202,17 @@ function sortPortfolioTable(column) {
     currentSortDirection = "asc";
   }
 
-  // Update header indicators
-  document.querySelectorAll("th.sortable").forEach(th => {
-    th.classList.remove("asc", "desc");
-    if (th.dataset.sort === column) {
-      th.classList.add(currentSortDirection);
-    }
-  });
+  // Update header indicators in portfolio table only
+  const consolidatedBody = document.getElementById("consolidated-body");
+  const portfolioTable = consolidatedBody?.closest("table");
+  if (portfolioTable) {
+    portfolioTable.querySelectorAll("th.sortable").forEach(th => {
+      th.classList.remove("asc", "desc");
+      if (th.dataset.sort === column) {
+        th.classList.add(currentSortDirection);
+      }
+    });
+  }
 
   // Sort data
   const sorted = [...portfolioData].sort((a, b) => {
@@ -278,30 +285,89 @@ function renderPortfolioPieChart(positions) {
 }
 
 function loadHistory(history) {
-  const tbody = document.getElementById("history-body");
-  tbody.innerHTML = "";
-
   if (!history.length) {
+    const tbody = document.getElementById("history-body");
     tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
     return;
   }
 
-  history.forEach((t) => {
+  // Store history data with calculated fields for sorting
+  historyData = history.map((t) => ({
+    ...t,
+    price: Number(t.price || 0),
+    quantity: Number(t.quantity || 0),
+    totalValue: Number(t.quantity || 0) * Number(t.price || 0),
+    action: t.action.charAt(0).toUpperCase() + t.action.slice(1),
+  }));
+
+  // Apply default sort by date, descending
+  sortTransactionTable("transaction_date", true);
+}
+
+function renderTransactionTable(transactions) {
+  const tbody = document.getElementById("history-body");
+  tbody.innerHTML = "";
+
+  if (!transactions.length) {
+    tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history.</td></tr>';
+    return;
+  }
+
+  transactions.forEach((t) => {
     const row = document.createElement("tr");
-    const action = t.action.charAt(0).toUpperCase() + t.action.slice(1);
-    const pricePerShare = Number(t.price || 0);
-    const quantity = Number(t.quantity || 0);
-    const totalValue = quantity * pricePerShare;
     row.innerHTML = `
-      <td>${action}</td>
+      <td>${t.action}</td>
       <td>${t.ticker}</td>
-      <td>${quantity}</td>
-      <td>$${pricePerShare.toFixed(2)}</td>
-      <td>$${totalValue.toFixed(2)}</td>
+      <td>${t.quantity}</td>
+      <td>$${t.price.toFixed(2)}</td>
+      <td>$${t.totalValue.toFixed(2)}</td>
       <td>${t.transaction_date}</td>
     `;
     tbody.appendChild(row);
   });
+}
+
+function sortTransactionTable(column, isInitialSort = false) {
+  if (!isInitialSort && currentHistorySortColumn === column) {
+    currentHistorySortDirection = currentHistorySortDirection === "asc" ? "desc" : "asc";
+  } else {
+    currentHistorySortColumn = column;
+    currentHistorySortDirection = isInitialSort ? "desc" : "asc";
+  }
+
+  // Update header indicators in history table
+  const historyBody = document.getElementById("history-body");
+  const historyTable = historyBody?.closest("table");
+  if (historyTable) {
+    historyTable.querySelectorAll("th.sortable").forEach(th => {
+      th.classList.remove("asc", "desc");
+      if (th.dataset.sort === column) {
+        th.classList.add(currentHistorySortDirection);
+      }
+    });
+  }
+
+  // Sort data
+  const sorted = [...historyData].sort((a, b) => {
+    let aVal = a[column];
+    let bVal = b[column];
+
+    // Handle null values
+    if (aVal === null) aVal = -Infinity;
+    if (bVal === null) bVal = -Infinity;
+
+    // String comparison
+    if (typeof aVal === "string") {
+      return currentHistorySortDirection === "asc"
+        ? aVal.localeCompare(bVal)
+        : bVal.localeCompare(aVal);
+    }
+
+    // Numeric comparison
+    return currentHistorySortDirection === "asc" ? aVal - bVal : bVal - aVal;
+  });
+
+  renderTransactionTable(sorted);
 }
 
 function populateSellDropdown(holdings) {
@@ -720,7 +786,14 @@ document.querySelectorAll(".perf-period-btn").forEach(btn => {
 document.querySelectorAll("th.sortable").forEach(th => {
   th.addEventListener("click", () => {
     const column = th.dataset.sort;
-    sortPortfolioTable(column);
+    const table = th.closest("table");
+    const historyBody = table?.querySelector("#history-body");
+
+    if (historyBody) {
+      sortTransactionTable(column);
+    } else {
+      sortPortfolioTable(column);
+    }
   });
 });
 
