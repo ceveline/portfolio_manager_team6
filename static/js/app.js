@@ -736,3 +736,13 @@ window.addEventListener("DOMContentLoaded", () => {
   const endDate = document.getElementById("perf-end-date").value;
   loadPerformanceChart(startDate, endDate);
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+  const toggleBtn = document.getElementById('filter-toggle-btn');
+  const filterPanel = document.getElementById('filter-options-panel');
+
+  toggleBtn.addEventListener('click', function () {
+    // Toggles the visibility class
+    filterPanel.classList.toggle('d-none');
+  });
+});
