@@ -8,6 +8,7 @@ let currentSortDirection = "asc";
 let availableQuantities = {}; // Map of ticker to total available quantity
 
 async function loadPortfolio(filters = {}) {
+  
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
@@ -731,10 +732,26 @@ window.addEventListener("DOMContentLoaded", () => {
     currentDateEl.textContent = getTodayDate();
   }
   setDefaultPerformanceDates();
-  loadPortfolio();
   const startDate = document.getElementById("perf-start-date").value;
   const endDate = document.getElementById("perf-end-date").value;
   loadPerformanceChart(startDate, endDate);
+
+  let refreshing = false;
+
+  async function refreshPortfolio() {
+    if (refreshing) return;
+
+    refreshing = true;
+
+    try {
+      await loadPortfolio();
+    } finally {
+      refreshing = false;
+    }
+}
+
+loadPortfolio(); // Initial load
+setInterval(refreshPortfolio, 1000);
 });
 
 document.addEventListener('DOMContentLoaded', function () {
