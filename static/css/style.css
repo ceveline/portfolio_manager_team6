@@ -402,3 +402,8 @@ th.sortable.desc .sort-indicator::after {
   color: #0f172a;
   font-weight: bold;
 }
+#consolidated-table th,
+#history th {
+  font-size: 0.75rem;
+}
+
