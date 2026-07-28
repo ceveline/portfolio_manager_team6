@@ -971,5 +971,24 @@ document.addEventListener("DOMContentLoaded", () => {
             modal.style.display = "none";
         }
     });
+const supportBtn = document.getElementById("support-btn");
+const supportModal = document.getElementById("support-modal");
+const closeSupport = document.querySelector(".close-support");
 
+if (!supportBtn || !supportModal || !closeSupport) return;
+
+supportBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    supportModal.style.display = "block";
+});
+
+closeSupport.addEventListener("click", () => {
+    supportModal.style.display = "none";
+});
+
+window.addEventListener("click", (e) => {
+    if (e.target === supportModal) {
+        supportModal.style.display = "none";
+    }
+});
 });
