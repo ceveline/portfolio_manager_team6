@@ -156,11 +156,14 @@ async function loadPortfolioWithSummary() {
       totalShares += pos.shares_held;
     });
     document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
+const sign = totalPnl >= 0 ? "+" : "";
 
-    const sign = totalPnl >= 0 ? "+" : "";
-document.querySelector("#total-gain-loss strong").textContent =
+const gainLossElement = document.querySelector("#total-gain-loss strong");
+
+gainLossElement.textContent =
   `${sign}$${totalPnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
 
+gainLossElement.style.color = totalPnl >= 0 ? "green" : "#ca3423";
     
     if (!summary.positions || summary.positions.length === 0) {
       const tbody = document.getElementById("consolidated-body");
@@ -257,14 +260,14 @@ function renderPortfolioPieChart(positions) {
   const values = positions.map(pos => pos.market_value !== null ? pos.market_value : 0);
 
   const colors = [
-    "#4e79a7",
-    "#f28e2b",
-    "#e15759",
-    "#76b7b2",
-    "#59a14f",
-    "#edc948",
-    "#b07aa1",
-    "#ff9da7"
+  "#1F4E79", // navy blue
+  "#4E79A7", // steel blue
+  "#76B7B2", // teal
+  "#59A14F", // muted green
+  "#9C755F", // bronze/brown
+  "#79706E", // charcoal gray
+  "#B07AA1", // muted purple
+  "#F28E2B"  // muted orange
   ];
 
   if (portfolioPieChart) {
@@ -903,7 +906,7 @@ function renderPnLBarChart(positions) {
 );
 
   const colors = values.map(v =>
-    v >= 0 ? "#2ecc71" : "#e74c3c"
+    v >= 0 ? "#2ecc71" : "#C0392B"
   );
 
   if (pnlBarChart) {
@@ -917,6 +920,7 @@ function renderPnLBarChart(positions) {
       datasets: [{
         label: "Profit / Loss",
         data: values,
+        borderRadius: 8,
         backgroundColor: colors
       }]
     },
@@ -928,13 +932,24 @@ function renderPnLBarChart(positions) {
           display: false
         }
       },
+      
+
+
       scales: {
-        x: {
-          ticks: {
-            callback: value => "$" + value
-          }
-        }
-      }
+  x: {
+    ticks: {
+      callback: value => "$" + value
+    },
+    grid: {
+      display: false
+    }
+  },
+  y: {
+    grid: {
+      display: false
+    }
+  }
+}
     }
   });
 }
