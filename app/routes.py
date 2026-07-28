@@ -111,11 +111,6 @@ def list_holdings():
     return jsonify([h.to_dict() for h in holdings]), 200
 
 
-@app.route('/profile')
-def profile():
-    return render_template('profile.html')
-
-
 @api.route("/holdings/<int:holding_id>", methods=["GET"])
 @swag_from(
     {
