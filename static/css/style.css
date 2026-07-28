@@ -441,3 +441,8 @@ th.sortable.desc .sort-indicator::after {
 
     cursor: pointer;
 }
+#consolidated-table th,
+#history th {
+  font-size: 0.75rem;
+}
+

@@ -35,8 +35,11 @@
 </div>
 
   <div class="profile-section">
-    
-    <div class="profile-avatar">JD</div>
+
+  <div class="profile-top">
+    <div class="profile-avatar">
+      JD
+    </div>
 
     <div class="profile-details">
         <div class="profile-name">John Doe</div>
@@ -313,9 +316,17 @@
         </tbody>
       </table>
     </div>
-    <div id="portfolio-chart-container" class="mt-4">
-      <canvas id="portfolio-pie-chart"></canvas>
-    </div>
+    <div class="row mt-4">
+  <div class="col-md-6">
+    <h5>Portfolio Allocation</h5>
+    <canvas id="portfolio-pie-chart"></canvas>
+  </div>
+
+  <div class="col-md-6">
+    <h5>Total P&L by Holding</h5>
+    <canvas id="pnl-bar-chart"></canvas>
+  </div>
+</div>
   </div>
 </section>
 
@@ -355,7 +366,6 @@
     </div>
   </div>
 </section>
-
 
 <section id="history" class="card mb-4">
   <div class="card-body">

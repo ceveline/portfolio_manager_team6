@@ -2,6 +2,7 @@ const API_BASE = "/api";
 let holdingsData = [];
 let portfolioPieChart = null;
 let performanceChart = null;
+let pnlBarChart = null;
 let portfolioData = [];
 let currentSortColumn = "ticker"; // Default sort by ticker
 let currentSortDirection = "asc";
@@ -169,6 +170,7 @@ async function loadPortfolioWithSummary() {
     portfolioData = summary.positions;
     sortPortfolioTable("ticker"); // Apply default sort
     renderPortfolioPieChart(summary.positions);
+    renderPnLBarChart(summary.positions);
   } catch (err) {
     console.error("Error loading portfolio summary:", err);
   }
@@ -280,11 +282,14 @@ function renderPortfolioPieChart(positions) {
         }
       ]
     },
+
     options: {
       responsive: true,
       maintainAspectRatio: true,
       aspectRatio: 1
     }
+
+    
   });
 }
 
@@ -305,8 +310,10 @@ function loadHistory(history) {
   }));
 
   // Apply default sort by date, descending
+  historyCurrentPage = 1;
   sortTransactionTable("transaction_date");
 }
+
 
 function renderTransactionTable(transactions) {
   const tbody = document.getElementById("history-body");
@@ -882,6 +889,52 @@ window.addEventListener("DOMContentLoaded", () => {
 loadPortfolio(); // Initial load
 setInterval(refreshPortfolio, 60000);
 });
+
+function renderPnLBarChart(positions) {
+  const canvas = document.getElementById("pnl-bar-chart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const labels = positions.map(p => p.ticker);
+  const values = positions.map(p =>
+  (p.realized_pnl ?? 0) + (p.unrealized_pnl ?? 0)
+);
+
+  const colors = values.map(v =>
+    v >= 0 ? "#2ecc71" : "#e74c3c"
+  );
+
+  if (pnlBarChart) {
+    pnlBarChart.destroy();
+  }
+
+  pnlBarChart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Profit / Loss",
+        data: values,
+        backgroundColor: colors
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            callback: value => "$" + value
+          }
+        }
+      }
+    }
+  });
+}
 
 document.addEventListener('DOMContentLoaded', function () {
   const toggleBtn = document.getElementById('filter-toggle-btn');
