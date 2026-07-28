@@ -2,6 +2,7 @@ const API_BASE = "/api";
 let holdingsData = [];
 let portfolioPieChart = null;
 let performanceChart = null;
+let pnlBarChart = null;
 let portfolioData = [];
 let currentSortColumn = "ticker"; // Default sort by ticker
 let currentSortDirection = "asc";
@@ -10,7 +11,6 @@ let historyData = []; // Store transaction data for sorting
 let currentHistorySortColumn = "transaction_date"; // Default sort by date
 let currentHistorySortDirection = "desc"; // Descending for most recent first
 
-let historyData = [];
 let historyCurrentPage = 1;
 const historyRowsPerPage = 5;
 
@@ -170,6 +170,7 @@ async function loadPortfolioWithSummary() {
     portfolioData = summary.positions;
     sortPortfolioTable("ticker"); // Apply default sort
     renderPortfolioPieChart(summary.positions);
+    renderPnLBarChart(summary.positions);
   } catch (err) {
     console.error("Error loading portfolio summary:", err);
   }
@@ -281,11 +282,14 @@ function renderPortfolioPieChart(positions) {
         }
       ]
     },
+
     options: {
       responsive: true,
       maintainAspectRatio: true,
       aspectRatio: 1
     }
+
+    
   });
 }
 
@@ -293,6 +297,7 @@ function loadHistory(history) {
   historyData = history;
   historyCurrentPage = 1;
   renderHistoryPage();
+
 }
 
 function renderHistoryPage() {
@@ -316,24 +321,18 @@ function renderHistoryPage() {
     const pricePerShare = Number(t.price || 0);
     const quantity = Number(t.quantity || 0);
     const totalValue = quantity * pricePerShare;
+    row.innerHTML = `
+      <td>${action}</td>
+      <td>${t.ticker}</td>
+      <td>${quantity}</td>
+      <td>$${pricePerShare.toFixed(2)}</td>
+      <td>$${totalValue.toFixed(2)}</td>
+      <td>${t.transaction_date}</td>
+    `;
 
-  if (!history.length) {
-    const tbody = document.getElementById("history-body");
-    tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
-    return;
-  }
-
-  // Store history data with calculated fields for sorting
-  historyData = history.map((t) => ({
-    ...t,
-    price: Number(t.price || 0),
-    quantity: Number(t.quantity || 0),
-    totalValue: Number(t.quantity || 0) * Number(t.price || 0),
-    action: t.action.charAt(0).toUpperCase() + t.action.slice(1),
-  }));
-
-  // Apply default sort by date, descending
-  sortTransactionTable("transaction_date", true);
+    tbody.appendChild(row);
+  });
+    updateHistoryPagination();
 }
 
 function renderTransactionTable(transactions) {
@@ -901,6 +900,52 @@ if (nextButton) {
 loadPortfolio(); // Initial load
 setInterval(refreshPortfolio, 60000);
 });
+
+function renderPnLBarChart(positions) {
+  const canvas = document.getElementById("pnl-bar-chart");
+  if (!canvas || typeof Chart === "undefined") return;
+
+  const labels = positions.map(p => p.ticker);
+  const values = positions.map(p =>
+  (p.realized_pnl ?? 0) + (p.unrealized_pnl ?? 0)
+);
+
+  const colors = values.map(v =>
+    v >= 0 ? "#2ecc71" : "#e74c3c"
+  );
+
+  if (pnlBarChart) {
+    pnlBarChart.destroy();
+  }
+
+  pnlBarChart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Profit / Loss",
+        data: values,
+        backgroundColor: colors
+      }]
+    },
+    options: {
+      indexAxis: "y",
+      responsive: true,
+      plugins: {
+        legend: {
+          display: false
+        }
+      },
+      scales: {
+        x: {
+          ticks: {
+            callback: value => "$" + value
+          }
+        }
+      }
+    }
+  });
+}
 
 document.addEventListener('DOMContentLoaded', function () {
   const toggleBtn = document.getElementById('filter-toggle-btn');
