@@ -140,6 +140,8 @@ async function loadPortfolioWithSummary() {
     const res = await fetch(`${API_BASE}/summary`);
     if (!res.ok) throw new Error("Failed to load summary");
     const summary = await res.json();
+    const totalPnl = summary.total_unrealized_pnl + summary.total_realized_pnl;
+
 
     document.querySelector("#portfolio-cost-basis").textContent = `$${summary.total_cost_basis.toFixed(2)}`;
     document.querySelector("#portfolio-market-value").textContent = `$${summary.total_market_value.toFixed(2)}`;
@@ -155,10 +157,11 @@ async function loadPortfolioWithSummary() {
     });
     document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
 
-    const sign = summary.total_unrealized_pnl >= 0 ? "+" : "";
-    document.querySelector("#total-gain-loss strong").textContent =
-      `${sign}$${summary.total_unrealized_pnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
+    const sign = totalPnl >= 0 ? "+" : "";
+document.querySelector("#total-gain-loss strong").textContent =
+  `${sign}$${totalPnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
 
+    
     if (!summary.positions || summary.positions.length === 0) {
       const tbody = document.getElementById("consolidated-body");
       tbody.innerHTML = '<tr class="empty-state"><td colspan="8">No portfolio data yet.</td></tr>';
