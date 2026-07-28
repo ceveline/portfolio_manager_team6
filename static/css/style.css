@@ -402,3 +402,42 @@ th.sortable.desc .sort-indicator::after {
   color: #0f172a;
   font-weight: bold;
 }
+
+.profile-modal {
+    display: none;
+    position: fixed;
+    z-index: 9999;
+
+    left: 0;
+    top: 0;
+
+    width: 100%;
+    height: 100%;
+
+    background: rgba(0,0,0,.5);
+}
+
+.profile-modal-content {
+    width: 400px;
+
+    background: white;
+
+    margin: 8% auto;
+
+    padding: 30px;
+
+    border-radius: 12px;
+
+    position: relative;
+}
+
+.close-profile {
+    position: absolute;
+
+    top: 15px;
+    right: 20px;
+
+    font-size: 30px;
+
+    cursor: pointer;
+}
