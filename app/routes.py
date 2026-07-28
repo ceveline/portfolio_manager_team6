@@ -34,44 +34,21 @@ def _parse_operator_value(raw_value):
 
 
 def _fetch_current_price(ticker):
-    """Best-effort live price lookup: AWS cached API first, yfinance as
-    fallback. Returns a float, or None if both sources fail. Shared by
-    the /price endpoint and the /summary performance endpoint so there's
-    one place that knows how to get "the price right now".
+    """Fetch current price using yfinance with curl_cffi session to avoid
+    rate-limiting. The session impersonates a browser's TLS fingerprint so
+    Yahoo Finance won't block cloud/CI IPs. Returns float or None if fetch fails.
     """
-    import requests
-
     ticker_upper = ticker.upper()
 
-    # Try AWS cached price API first
     try:
-        aws_url = f"https://c4rm9elh30.execute-api.us-east-1.amazonaws.com/default/cachedPriceData?ticker={ticker_upper}"
-        response = requests.get(aws_url, timeout=10)
-        if response.status_code == 200:
-            data = response.json()
-            if isinstance(data, dict):
-                if "price" in data and data["price"] is not None:
-                    return float(data["price"])
-
-                price_data = data.get("price_data") or {}
-                close_prices = price_data.get("close") or []
-                if close_prices:
-                    return float(close_prices[-1])
-    except Exception:
-        pass
-
-    # Fall back to yfinance (see _yf_session comment above for why a
-    # plain yf.Ticker() call tends to fail for any ticker, not just
-    # obscure ones)
-    try:
-        stock = yf.Ticker(ticker_upper)
+        stock = yf.Ticker(ticker_upper, session=_yf_session)
         hist = stock.history(period="1d")
 
         if not hist.empty:
             return float(hist["Close"].iloc[-1])
 
     except Exception as e:
-        print("Yahoo Finance failed:", e)
+        print(f"Failed to fetch {ticker_upper}: {e}")
 
     return None
 
