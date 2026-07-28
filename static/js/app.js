@@ -294,45 +294,12 @@ function renderPortfolioPieChart(positions) {
 }
 
 function loadHistory(history) {
-  historyData = history;
-  historyCurrentPage = 1;
-  renderHistoryPage();
-
-}
-
-function renderHistoryPage() {
-  const tbody = document.getElementById("history-body");
-  tbody.innerHTML = "";
-
-  if (!historyData.length) {
+  if (!history.length) {
+    const tbody = document.getElementById("history-body");
     tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
     return;
   }
 
-  const start = (historyCurrentPage - 1) * historyRowsPerPage;
-  const end = start + historyRowsPerPage;
-
-  const pageData = historyData.slice(start, end);
-
-  pageData.forEach((t) => {
-    const row = document.createElement("tr");
-
-    const action = t.action.charAt(0).toUpperCase() + t.action.slice(1);
-    const pricePerShare = Number(t.price || 0);
-    const quantity = Number(t.quantity || 0);
-    const totalValue = quantity * pricePerShare;
-    row.innerHTML = `
-      <td>${action}</td>
-      <td>${t.ticker}</td>
-      <td>${quantity}</td>
-      <td>$${pricePerShare.toFixed(2)}</td>
-      <td>$${totalValue.toFixed(2)}</td>
-      <td>${t.transaction_date}</td>
-    `;
-
-    tbody.appendChild(row);
-  });
-    updateHistoryPagination();
   // Store history data with calculated fields for sorting
   historyData = history.map((t) => ({
     ...t,
@@ -343,8 +310,10 @@ function renderHistoryPage() {
   }));
 
   // Apply default sort by date, descending
+  historyCurrentPage = 1;
   sortTransactionTable("transaction_date");
 }
+
 
 function renderTransactionTable(transactions) {
   const tbody = document.getElementById("history-body");
