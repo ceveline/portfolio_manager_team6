@@ -484,8 +484,18 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
 
   document.getElementById("sell-quantity-input").value = "";
 
-  const averagePrice = getPortfolioAvgPrice(holding.ticker, holdingsData);
-  document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
+  try {
+    const response = await fetch(`/api/price/${ticker}`);
+    if (response.ok) {
+      const data = await response.json();
+      document.getElementById("sell-price").textContent = `$${data.price.toFixed(2)}`;
+    } else {
+      document.getElementById("sell-price").textContent = "-";
+    }
+  } catch (err) {
+    console.error("Failed to fetch current price:", err);
+    document.getElementById("sell-price").textContent = "-";
+  }
 });
 
 const tickerSelect = document.getElementById("ticker");
