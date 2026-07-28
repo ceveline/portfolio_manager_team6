@@ -1,9 +1,9 @@
 from datetime import date, datetime, timedelta
+import yfinance as yf
 
 from curl_cffi import requests as curl_requests
 from flasgger import swag_from
-from flask import Blueprint, jsonify, request
-import yfinance as yf
+from flask import Flask, Blueprint, jsonify, request, render_template
 
 from app import db, performance, price_backfill
 from app.models import Holding, PriceHistory, Transaction
@@ -15,8 +15,8 @@ api = Blueprint("api", __name__, url_prefix="/api")
 # column 1 (char 0)" / "possibly delisted"). Giving yfinance a session
 # that impersonates a real browser's TLS fingerprint fixes this - it's
 # not about the ticker being invalid, real tickers get the same error.
+app = Flask(__name__)
 _yf_session = curl_requests.Session(impersonate="chrome")
-
 
 def _parse_operator_value(raw_value):
     if raw_value is None:
