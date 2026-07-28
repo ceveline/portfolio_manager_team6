@@ -431,7 +431,8 @@ th.sortable.desc .sort-indicator::after {
     position: relative;
 }
 
-.close-profile {
+.close-profile,
+.close-support {
     position: absolute;
 
     top: 15px;
