@@ -74,6 +74,50 @@ def get_stock_price(ticker):
     return jsonify({"ticker": ticker.upper(), "price": price}), 200
 
 
+@api.route("/ticker/<ticker>", methods=["GET"])
+@swag_from(
+    {
+        "tags": ["Stock Data"],
+        "summary": "Get detailed ticker information from Yahoo Finance",
+        "parameters": [
+            {"name": "ticker", "in": "path", "type": "string", "required": True}
+        ],
+        "responses": {
+            200: {"description": "Detailed ticker information"},
+            400: {"description": "Invalid ticker or unable to fetch info"}
+        },
+    }
+)
+def get_ticker_info(ticker):
+    ticker_upper = ticker.upper()
+
+    try:
+        stock = yf.Ticker(ticker_upper, session=_yf_session)
+        info = stock.info
+
+        if not info:
+            return jsonify({"error": f"No data found for {ticker_upper}"}), 400
+
+        return jsonify({
+            "ticker": ticker_upper,
+            "name": info.get("longName", ""),
+            "sector": info.get("sector", ""),
+            "industry": info.get("industry", ""),
+            "currentPrice": info.get("currentPrice", None),
+            "fiftyTwoWeekHigh": info.get("fiftyTwoWeekHigh", None),
+            "fiftyTwoWeekLow": info.get("fiftyTwoWeekLow", None),
+            "marketCap": info.get("marketCap", None),
+            "peRatio": info.get("trailingPE", None),
+            "dividendYield": info.get("dividendYield", None),
+            "beta": info.get("beta", None),
+            "avgVolume": info.get("averageVolume", None),
+            "website": info.get("website", ""),
+        }), 200
+    except Exception as e:
+        print(f"Failed to get ticker info for {ticker_upper}: {e}")
+        return jsonify({"error": f"Could not fetch info for {ticker_upper}"}), 400
+
+
 @api.route("/holdings", methods=["GET"])
 @swag_from(
     {

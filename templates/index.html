@@ -435,6 +435,99 @@
       color: var(--color-text-primary);
     }
 
+    /* Ticker Modal Styles */
+    .ticker-modal {
+      position: fixed;
+      z-index: 10000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ticker-modal-content {
+      background: var(--color-bg-secondary);
+      border-radius: 12px;
+      box-shadow: var(--color-shadow-lg);
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .ticker-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: var(--spacing-lg) var(--spacing-xl);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .ticker-modal-header h2 {
+      color: var(--color-accent);
+      font-size: var(--type-scale-xl);
+    }
+
+    .ticker-modal-close {
+      background: none;
+      border: none;
+      font-size: 28px;
+      cursor: pointer;
+      color: var(--color-text-secondary);
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .ticker-modal-close:hover {
+      color: var(--color-text-primary);
+    }
+
+    .ticker-modal-body {
+      padding: var(--spacing-xl);
+    }
+
+    .ticker-info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--spacing-lg);
+    }
+
+    .ticker-info-item {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .ticker-info-label {
+      font-size: var(--type-scale-sm);
+      color: var(--color-text-secondary);
+      font-weight: 600;
+      margin-bottom: var(--spacing-xs);
+    }
+
+    .ticker-info-value {
+      font-size: var(--type-scale-base);
+      color: var(--color-text-primary);
+      font-weight: 500;
+    }
+
+    .ticker {
+      cursor: pointer;
+      text-decoration: underline;
+      transition: opacity 0.2s;
+    }
+
+    .ticker:hover {
+      opacity: 0.8;
+    }
+
     @media (max-width: 768px) {
       .container {
         flex-direction: column;
@@ -954,7 +1047,7 @@
                   <option value="AAPL">AAPL - Apple</option>
                   <option value="AMZN">AMZN - Amazon</option>
                   <option value="C">C - Citigroup</option>
-                  <option value="FB">FB - Meta</option>
+                  <option value="META">META - Meta</option>
                   <option value="GOOGL">GOOGL - Google</option>
                   <option value="MSFT">MSFT - Microsoft</option>
                   <option value="NVDA">NVDA - NVIDIA</option>
@@ -1151,5 +1244,70 @@
     });
   </script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+
+  <!-- Ticker Info Modal -->
+  <div id="ticker-modal" class="ticker-modal" style="display: none;">
+    <div class="ticker-modal-content">
+      <div class="ticker-modal-header">
+        <h2 id="modal-ticker" style="margin: 0;">-</h2>
+        <button class="ticker-modal-close" onclick="closeTickerModal()">&times;</button>
+      </div>
+      <div class="ticker-modal-body">
+        <div id="ticker-modal-loading" style="text-align: center; padding: 2rem;">Loading...</div>
+        <div id="ticker-modal-info" style="display: none;">
+          <div class="ticker-info-grid">
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Company Name</div>
+              <div id="modal-name" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Current Price</div>
+              <div id="modal-price" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Sector</div>
+              <div id="modal-sector" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Industry</div>
+              <div id="modal-industry" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">52-Week High</div>
+              <div id="modal-high" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">52-Week Low</div>
+              <div id="modal-low" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Market Cap</div>
+              <div id="modal-market-cap" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">P/E Ratio</div>
+              <div id="modal-pe-ratio" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Dividend Yield</div>
+              <div id="modal-dividend" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Beta</div>
+              <div id="modal-beta" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Avg Volume</div>
+              <div id="modal-volume" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Website</div>
+              <div id="modal-website" class="ticker-info-value">-</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
