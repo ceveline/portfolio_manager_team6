@@ -203,7 +203,6 @@ function renderPortfolioTable(positions) {
       <td>$${pos.cost_basis.toFixed(2)}</td>
       <td>${marketValueStr}</td>
       <td>${unrealizedPnlStr}</td>
-      <td>$${pos.realized_pnl.toFixed(2)}</td>
     `;
     tbody.appendChild(row);
   });
