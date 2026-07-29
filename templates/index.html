@@ -45,6 +45,7 @@
         <div class="profile-name">John Doe</div>
 
         <a href="#" id="profile-btn">My Profile</a>
+        <a href="#" id="support-btn">Support</a>
     </div>
 
   </div>
@@ -100,7 +101,7 @@
           <div class="card-body d-flex flex-column justify-content-center">
             
             <div class="metric-label">
-  <i class="ti ti-building-bank"></i>
+  <i class="ti ti-briefcase"></i>
   <div class="text-muted">Number of Holdings</div>
 </div>
 
@@ -156,13 +157,13 @@
         <select id="ticker" class="form-select" required>
           <option value="">Select a ticker...</option>
           <option value="AAPL">AAPL - Apple</option>
+          <option value="AMZN">AMZN - Amazon</option>
+          <option value="C">C - Citigroup</option>
+          <option value="FB">FB - Meta</option>
           <option value="GOOGL">GOOGL - Google</option>
           <option value="MSFT">MSFT - Microsoft</option>
-          <option value="TSLA">TSLA - Tesla</option>
-          <option value="META">META - Meta</option>
-          <option value="AMZN">AMZN - Amazon</option>
           <option value="NVDA">NVDA - NVIDIA</option>
-          <option value="SPY">SPY - S&P 500 ETF</option>
+          <option value="TSLA">TSLA - Tesla</option>
         </select>
       </div>
 
@@ -347,12 +348,12 @@
     </div>
     <div class="row mt-4">
   <div class="col-md-6">
-    <h5>Portfolio Allocation</h5>
+    <h4>Portfolio Allocation</h4>
     <canvas id="portfolio-pie-chart"></canvas>
   </div>
 
   <div class="col-md-6">
-    <h5>Total P&L by Holding</h5>
+    <h4>Total P&L by Holding</h4>
     <canvas id="pnl-bar-chart"></canvas>
   </div>
 </div>
@@ -421,14 +422,14 @@
             <label class="form-label">Ticker</label>
             <select id="history-filter-ticker" class="form-control">
               <option value="">All</option>
-              <option value="aapl">AAPL</option>
-              <option value="googl">GOOGL</option>
-              <option value="msft">MSFT</option>
-              <option value="tsla">TSLA</option>
-              <option value="meta">META</option>
-              <option value="amzn">AMZN</option>
-              <option value="nvda">NVDA</option>
-              <option value="spy">SPY</option>
+              <option value="AAPL">AAPL</option>
+              <option value="AMZN">AMZN</option>
+              <option value="C">C</option>
+              <option value="FB">FB</option>
+              <option value="GOOGL">GOOGL</option>
+              <option value="MSFT">MSFT</option>
+              <option value="NVDA">NVDA</option>
+              <option value="TSLA">TSLA</option>
             </select>
           </div>
           <div class="col-md-2">
@@ -529,8 +530,25 @@
         </button>
 
     </div>
+  </div>
+
+
+    <div id="support-modal" class="profile-modal">
+
+  <div class="profile-modal-content">
+
+    <span class="close-support">&times;</span>
+
+    <h2>Support</h2>
+
+    <p><strong>Need help?</strong></p>
+    <p>Contact our support team for assistance with your portfolio.</p>
+
+    <p><strong>Email:</strong> support@portfoliomanager.com</p>
 
   </div>
+
+</div>
 </section>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>

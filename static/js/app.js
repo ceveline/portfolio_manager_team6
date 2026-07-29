@@ -144,6 +144,8 @@ async function loadPortfolioWithSummary() {
     const res = await fetch(`${API_BASE}/summary`);
     if (!res.ok) throw new Error("Failed to load summary");
     const summary = await res.json();
+    const totalPnl = summary.total_unrealized_pnl + summary.total_realized_pnl;
+
 
     document.querySelector("#portfolio-cost-basis").textContent = `$${summary.total_cost_basis.toFixed(2)}`;
     document.querySelector("#portfolio-market-value").textContent = `$${summary.total_market_value.toFixed(2)}`;
@@ -158,11 +160,15 @@ async function loadPortfolioWithSummary() {
       totalShares += pos.shares_held;
     });
     document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
+const sign = totalPnl >= 0 ? "+" : "";
 
-    const sign = summary.total_unrealized_pnl >= 0 ? "+" : "";
-    document.querySelector("#total-gain-loss strong").textContent =
-      `${sign}$${summary.total_unrealized_pnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
+const gainLossElement = document.querySelector("#total-gain-loss strong");
 
+gainLossElement.textContent =
+  `${sign}$${totalPnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
+
+gainLossElement.style.color = totalPnl >= 0 ? "green" : "#ca3423";
+    
     if (!summary.positions || summary.positions.length === 0) {
       const tbody = document.getElementById("consolidated-body");
       tbody.innerHTML = '<tr class="empty-state"><td colspan="8">No portfolio data yet.</td></tr>';
@@ -258,14 +264,14 @@ function renderPortfolioPieChart(positions) {
   const values = positions.map(pos => pos.market_value !== null ? pos.market_value : 0);
 
   const colors = [
-    "#4e79a7",
-    "#f28e2b",
-    "#e15759",
-    "#76b7b2",
-    "#59a14f",
-    "#edc948",
-    "#b07aa1",
-    "#ff9da7"
+  "#1F4E79", // navy blue
+  "#4E79A7", // steel blue
+  "#76B7B2", // teal
+  "#59A14F", // muted green
+  "#9C755F", // bronze/brown
+  "#79706E", // charcoal gray
+  "#B07AA1", // muted purple
+  "#F28E2B"  // muted orange
   ];
 
   if (portfolioPieChart) {
@@ -488,8 +494,18 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
 
   document.getElementById("sell-quantity-input").value = "";
 
-  const averagePrice = getPortfolioAvgPrice(holding.ticker, holdingsData);
-  document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
+  try {
+    const response = await fetch(`/api/price/${ticker}`);
+    if (response.ok) {
+      const data = await response.json();
+      document.getElementById("sell-price").textContent = `$${data.price.toFixed(2)}`;
+    } else {
+      document.getElementById("sell-price").textContent = "-";
+    }
+  } catch (err) {
+    console.error("Failed to fetch current price:", err);
+    document.getElementById("sell-price").textContent = "-";
+  }
 });
 
 const tickerSelect = document.getElementById("ticker");
@@ -900,7 +916,7 @@ function renderPnLBarChart(positions) {
 );
 
   const colors = values.map(v =>
-    v >= 0 ? "#2ecc71" : "#e74c3c"
+    v >= 0 ? "#2ecc71" : "#C0392B"
   );
 
   if (pnlBarChart) {
@@ -914,6 +930,7 @@ function renderPnLBarChart(positions) {
       datasets: [{
         label: "Profit / Loss",
         data: values,
+        borderRadius: 8,
         backgroundColor: colors
       }]
     },
@@ -925,13 +942,24 @@ function renderPnLBarChart(positions) {
           display: false
         }
       },
+      
+
+
       scales: {
-        x: {
-          ticks: {
-            callback: value => "$" + value
-          }
-        }
-      }
+  x: {
+    ticks: {
+      callback: value => "$" + value
+    },
+    grid: {
+      display: false
+    }
+  },
+  y: {
+    grid: {
+      display: false
+    }
+  }
+}
     }
   });
 }
@@ -969,6 +997,11 @@ document.addEventListener("DOMContentLoaded", () => {
             modal.style.display = "none";
         }
     });
+const supportBtn = document.getElementById("support-btn");
+const supportModal = document.getElementById("support-modal");
+const closeSupport = document.querySelector(".close-support");
+
+if (!supportBtn || !supportModal || !closeSupport) return;
 
 });
 
@@ -1020,3 +1053,18 @@ if (applyRefreshButton) {
       .classList.add("d-none");
   });
 }
+supportBtn.addEventListener("click", (e) => {
+    e.preventDefault();
+    supportModal.style.display = "block";
+});
+
+closeSupport.addEventListener("click", () => {
+    supportModal.style.display = "none";
+});
+
+window.addEventListener("click", (e) => {
+    if (e.target === supportModal) {
+        supportModal.style.display = "none";
+    }
+});
+});
