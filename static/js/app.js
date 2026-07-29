@@ -1111,6 +1111,31 @@ function closeTickerModal() {
   modal.style.display = "none";
 }
 
+function buyFromModal() {
+  const ticker = document.getElementById("modal-ticker").textContent;
+  closeTickerModal();
+
+  // Switch to buy tab
+  document.querySelectorAll(".section-panel").forEach(tab => tab.classList.remove("active"));
+  document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
+
+  const buyTab = document.getElementById("buy");
+  if (buyTab) buyTab.classList.add("active");
+
+  // Pre-select ticker in buy form
+  const tickerSelect = document.getElementById("ticker");
+  if (tickerSelect) {
+    tickerSelect.value = ticker;
+    tickerSelect.focus();
+  }
+
+  // Scroll to buy section
+  setTimeout(() => {
+    const buySection = document.getElementById("buy");
+    if (buySection) buySection.scrollIntoView({ behavior: "smooth" });
+  }, 100);
+}
+
 window.addEventListener("click", (e) => {
   const modal = document.getElementById("ticker-modal");
   if (e.target === modal) {

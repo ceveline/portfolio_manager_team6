@@ -455,8 +455,6 @@
       box-shadow: var(--color-shadow-lg);
       max-width: 600px;
       width: 90%;
-      max-height: 80vh;
-      overflow-y: auto;
     }
 
     .ticker-modal-header {
@@ -1303,6 +1301,9 @@
               <div class="ticker-info-label">Website</div>
               <div id="modal-website" class="ticker-info-value">-</div>
             </div>
+          </div>
+          <div style="margin-top: var(--spacing-xl); display: flex; justify-content: center;">
+            <button class="btn btn-primary" onclick="buyFromModal()">Buy Stock</button>
           </div>
         </div>
       </div>
