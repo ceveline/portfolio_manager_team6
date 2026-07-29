@@ -13,6 +13,10 @@ let currentHistorySortColumn = "transaction_date"; // Default sort by date
 let currentHistorySortDirection = "desc"; // Descending for most recent first
 let historyCurrentPage = 1;
 const historyRowsPerPage = 5;
+let refreshInterval = 60000;
+let refreshTimer = null;
+let refreshPanel = null;
+let refreshing = false;
 
 async function loadPortfolio(filters = {}) {
   
@@ -573,10 +577,17 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   loadPortfolio();
 });
 
-const refreshButton = document.getElementById("refresh-data-btn");
-if (refreshButton) {
-  refreshButton.addEventListener("click", () => loadPortfolio());
-}
+document.addEventListener('DOMContentLoaded', function () {
+
+  const toggleBtnRefresh = document.getElementById('refresh-data-btn');
+
+  refreshPanel = document.getElementById('refresh-options-panel');
+
+  toggleBtnRefresh.addEventListener('click', function () {
+    refreshPanel.classList.toggle('d-none');
+  });
+
+});
 
 const historyFilterForm = document.getElementById("history-filter-form");
 if (historyFilterForm) {
@@ -872,23 +883,12 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-  let refreshing = false;
 
-  async function refreshPortfolio() {
-    if (refreshing) return;
 
-    refreshing = true;
-
-    try {
-      await loadPortfolio();
-    } finally {
-      refreshing = false;
-    }
-}
-
-loadPortfolio(); // Initial load
-setInterval(refreshPortfolio, 60000);
+  loadPortfolio(); // Initial load
+  startAutoRefresh();
 });
+
 
 function renderPnLBarChart(positions) {
   const canvas = document.getElementById("pnl-bar-chart");
@@ -944,6 +944,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Toggles the visibility class
     filterPanel.classList.toggle('d-none');
   });
+
 });
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -970,3 +971,52 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 });
+
+  async function refreshPortfolio() {
+    if (refreshing) return;
+
+    refreshing = true;
+
+    try {
+      await loadPortfolio();
+    } finally {
+      refreshing = false;
+    }
+}
+
+function startAutoRefresh() {
+  // Clear existing timer first
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+  }
+
+  refreshTimer = setInterval(async () => {
+    await refreshPortfolio();
+  }, refreshInterval);
+}
+
+const applyRefreshButton = document.getElementById("apply-refresh-btn");
+
+if (applyRefreshButton) {
+  applyRefreshButton.addEventListener("click", () => {
+
+    const selectedDuration =
+      document.getElementById("refresh-filter-action").value;
+
+    refreshInterval = Number(selectedDuration) || 60000;
+
+    startAutoRefresh();
+
+    console.log(
+      `Auto refresh changed to ${refreshInterval / 1000} seconds`
+    );
+
+    alert(
+      `Portfolio will refresh every ${refreshInterval / 60000} minute(s)`
+    );
+
+    document
+      .getElementById("refresh-options-panel")
+      .classList.add("d-none");
+  });
+}

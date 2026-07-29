@@ -249,17 +249,46 @@
   </div>
 </section>
 
-    <section id="portfolio" class="card mb-4">
+<section id="portfolio" class="card mb-4">
   <div class="card-body">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
-      <h2 class="card-title mb-0">Portfolio</h2>
+    <div class="portfolio-header">
 
-      <button id="refresh-data-btn" type="button" class="btn btn-outline-primary">
-        Refresh Data
-      </button>
+        <div>
+            <h2 class="card-title mb-0">Portfolio</h2>
+        </div>
+
+        <button id="refresh-data-btn" type="button" class="btn refresh-btn">
+            <i class="ti ti-settings"></i>
+            <span>Refresh Settings</span>
+        </button>
+
     </div>
 
+
+<div id="refresh-options-panel" class="row g-3 mt-3 d-none">
+
+    <div class="col-md-3">
+        <label class="form-label">Refresh Duration</label>
+
+        <select id="refresh-filter-action" class="form-select">
+            <option value="60000">1 minute</option>
+            <option value="120000">2 minutes</option>
+            <option value="180000">3 minutes</option>
+        </select>
+    </div>
+
+    <div class="col-12">
+        <button id="apply-refresh-btn" 
+                type="button" 
+                class="btn btn-primary">
+            Apply
+        </button>
+    </div>
+
+</div>
+
+    
     <div id="portfolio-stats" class="row row-cards mb-4">
       <div class="col-md-3">
         <div class="card">
@@ -427,7 +456,7 @@
             <input type="text" id="history-filter-price" class="form-control mt-2" placeholder="300" />
           </div>
           <div class="col-md-2">
-            <label class="form-label">Range</label>
+            <label class="form-label">Total Value</label>
             <select id="history-filter-price-range" class="form-select">
               <option value="">All</option>
               <option value="0-50">$0–$50</option>
