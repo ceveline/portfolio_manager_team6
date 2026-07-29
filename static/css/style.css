@@ -197,6 +197,12 @@ input {
   border-radius: 8px;
 }
 
+#refresh-data-btn {
+  background-color: #ffffff;
+  border: 1px solid #dee2e6;
+  color: #64748b;
+  border-radius: 8px;
+}
 
 /* Table polish */
 
@@ -447,3 +453,98 @@ th.sortable.desc .sort-indicator::after {
   font-size: 0.75rem;
 }
 
+/* Refresh Settings Button */
+.refresh-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 8px 14px;
+
+    border-radius: 10px;
+    border: 1px solid #dbe4f0;
+
+    background-color: white;
+    color: #206bc4;
+
+    font-weight: 600;
+    font-size: 14px;
+
+    transition: all 0.2s ease;
+}
+
+
+.refresh-btn i {
+    font-size: 18px;
+}
+
+
+.refresh-btn:hover {
+    background-color: #206bc4;
+    color: white;
+    transform: translateY(-1px);
+}
+
+
+/* Refresh Settings Panel */
+#refresh-options-panel {
+    margin-top: 15px;
+    padding: 20px;
+    background: white;
+    border: 1px solid #e6eaf0;
+    border-radius: 12px;
+    /* box-shadow: 0 4px 12px rgba(0,0,0,0.08); */
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+
+/* Refresh Duration Label */
+#refresh-options-panel .form-label {
+    font-weight: 600;
+    color: #344054;
+}
+
+
+/* Dropdown */
+#refresh-filter-action {
+    border-radius: 8px;
+    height: 40px;
+}
+
+
+/* Apply button */
+#apply-refresh-btn {
+    border-radius: 8px;
+    padding: 8px 20px;
+
+    font-weight: 600;
+
+    transition: all 0.2s ease;
+}
+
+
+#apply-refresh-btn:hover {
+    transform: translateY(-1px);
+}
+
+
+/* Smooth opening animation */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.portfolio-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    margin-bottom: 1rem;
+}
