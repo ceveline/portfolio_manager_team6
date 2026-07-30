@@ -639,5 +639,74 @@
     </div>
 
   </div>
+
+  <!-- Ticker Info Modal -->
+  <div id="ticker-modal" class="ticker-modal" style="display: none;">
+    <div class="ticker-modal-content">
+      <div class="ticker-modal-header">
+        <h2 id="modal-ticker" style="margin: 0;">-</h2>
+        <button class="ticker-modal-close" onclick="closeTickerModal()">&times;</button>
+      </div>
+      <div class="ticker-modal-body">
+        <div id="ticker-modal-loading" style="text-align: center; padding: 2rem;">Loading...</div>
+        <div id="ticker-modal-info" style="display: none;">
+          <div class="ticker-info-grid">
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Company Name</div>
+              <div id="modal-name" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Current Price</div>
+              <div id="modal-price" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Sector</div>
+              <div id="modal-sector" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Industry</div>
+              <div id="modal-industry" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">52-Week High</div>
+              <div id="modal-high" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">52-Week Low</div>
+              <div id="modal-low" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Market Cap</div>
+              <div id="modal-market-cap" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">P/E Ratio</div>
+              <div id="modal-pe-ratio" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Dividend Yield</div>
+              <div id="modal-dividend" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Beta</div>
+              <div id="modal-beta" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Avg Volume</div>
+              <div id="modal-volume" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Website</div>
+              <div id="modal-website" class="ticker-info-value">-</div>
+            </div>
+          </div>
+          <div style="margin-top: 1.5rem; display: flex; justify-content: center;">
+            <button class="btn btn-primary" onclick="buyFromModal()">Buy Stock</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

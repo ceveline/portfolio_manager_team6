@@ -17,6 +17,7 @@ let refreshInterval = 60000;
 let refreshTimer = null;
 let refreshPanel = null;
 let refreshing = false;
+let tickerInfoCache = {}; // Cache for ticker info to avoid repeated API calls
 
 // Navigation tab switching
 function switchTab(tabName, e) {
@@ -70,6 +71,137 @@ function closeModal(modalId) {
     modal.style.display = 'none';
   }
 }
+
+// Ticker modal functions
+function openTickerModal(ticker) {
+  const modal = document.getElementById("ticker-modal");
+  const modalLoading = document.getElementById("ticker-modal-loading");
+  const modalInfo = document.getElementById("ticker-modal-info");
+
+  modal.style.display = "flex";
+  modalLoading.style.display = "block";
+  modalInfo.style.display = "none";
+
+  document.getElementById("modal-ticker").textContent = ticker.toUpperCase();
+
+  fetchTickerInfo(ticker);
+}
+
+function closeTickerModal() {
+  const modal = document.getElementById("ticker-modal");
+  modal.style.display = "none";
+}
+
+function buyFromModal() {
+  const ticker = document.getElementById("modal-ticker").textContent;
+  closeTickerModal();
+
+  // Switch to buy tab
+  switchTab("buy");
+
+  // Pre-select ticker in buy form
+  const tickerInput = document.getElementById("ticker");
+  if (tickerInput) {
+    tickerInput.value = ticker;
+    tickerInput.focus();
+  }
+}
+
+async function fetchTickerInfo(ticker) {
+  const tickerUpper = ticker.toUpperCase();
+
+  // Check cache first
+  if (tickerInfoCache[tickerUpper]) {
+    displayTickerInfo(tickerInfoCache[tickerUpper]);
+    return;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+
+    const res = await fetch(`${API_BASE}/ticker/${ticker}`, { signal: controller.signal });
+    clearTimeout(timeoutId);
+    const data = await res.json();
+
+    if (!res.ok) {
+      document.getElementById("ticker-modal-loading").style.display = "none";
+      document.getElementById("ticker-modal-info").innerHTML =
+        `<p style="color: #dc2626;">Unable to fetch data for ${ticker}</p>`;
+      document.getElementById("ticker-modal-info").style.display = "block";
+      return;
+    }
+
+    // Cache the result
+    tickerInfoCache[tickerUpper] = data;
+    displayTickerInfo(data);
+  } catch (err) {
+    console.error("Error fetching ticker info:", err);
+    document.getElementById("ticker-modal-loading").style.display = "none";
+    const errorMsg = err.name === "AbortError" ? "Request timed out (took too long)" : "Error loading ticker information";
+    document.getElementById("ticker-modal-info").innerHTML =
+      `<p style="color: #dc2626;">${errorMsg}</p>`;
+    document.getElementById("ticker-modal-info").style.display = "block";
+  }
+}
+
+function formatNumber(value, type = "number") {
+  if (value === null || value === undefined) return "-";
+
+  if (type === "currency") {
+    return `$${parseFloat(value).toFixed(2)}`;
+  } else if (type === "percent") {
+    return `${(parseFloat(value) * 100).toFixed(2)}%`;
+  } else if (type === "marketCap") {
+    const num = parseFloat(value);
+    if (num >= 1e12) return `$${(num / 1e12).toFixed(2)}T`;
+    if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
+    if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
+    return `$${num.toFixed(0)}`;
+  } else if (type === "volume") {
+    const num = parseFloat(value);
+    if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
+    if (num >= 1e3) return `${(num / 1e3).toFixed(1)}K`;
+    return num.toFixed(0);
+  }
+
+  return parseFloat(value).toFixed(2);
+}
+
+function displayTickerInfo(data) {
+  const modalLoading = document.getElementById("ticker-modal-loading");
+  const modalInfo = document.getElementById("ticker-modal-info");
+
+  document.getElementById("modal-name").textContent = data.name || "-";
+  document.getElementById("modal-price").textContent = data.currentPrice ? formatNumber(data.currentPrice, "currency") : "-";
+  document.getElementById("modal-sector").textContent = data.sector || "-";
+  document.getElementById("modal-industry").textContent = data.industry || "-";
+  document.getElementById("modal-high").textContent = data.fiftyTwoWeekHigh ? formatNumber(data.fiftyTwoWeekHigh, "currency") : "-";
+  document.getElementById("modal-low").textContent = data.fiftyTwoWeekLow ? formatNumber(data.fiftyTwoWeekLow, "currency") : "-";
+  document.getElementById("modal-market-cap").textContent = data.marketCap ? formatNumber(data.marketCap, "marketCap") : "-";
+  document.getElementById("modal-pe-ratio").textContent = data.peRatio ? formatNumber(data.peRatio) : "-";
+  document.getElementById("modal-dividend").textContent = data.dividendYield ? formatNumber(data.dividendYield, "percent") : "-";
+  document.getElementById("modal-beta").textContent = data.beta ? formatNumber(data.beta) : "-";
+  document.getElementById("modal-volume").textContent = data.avgVolume ? formatNumber(data.avgVolume, "volume") : "-";
+
+  const websiteEl = document.getElementById("modal-website");
+  if (data.website) {
+    websiteEl.innerHTML = `<a href="${data.website}" target="_blank" style="color: #0066cc; text-decoration: underline;">${data.website}</a>`;
+  } else {
+    websiteEl.textContent = "-";
+  }
+
+  modalLoading.style.display = "none";
+  modalInfo.style.display = "block";
+}
+
+// Close modal when clicking outside
+window.addEventListener("click", (e) => {
+  const modal = document.getElementById("ticker-modal");
+  if (e.target === modal) {
+    modal.style.display = "none";
+  }
+});
 
 async function loadPortfolio(filters = {}) {
 
@@ -285,7 +417,7 @@ function renderPortfolioTable(positions) {
     const currentPriceStr = pos.current_price !== null ? `$${pos.current_price.toFixed(2)}` : "-";
 
     row.innerHTML = `
-      <td>${pos.ticker}</td>
+      <td><span class="ticker" onclick="openTickerModal('${pos.ticker}')">${pos.ticker}</span></td>
       <td>${pos.shares_held}</td>
       <td>$${pos.avg_cost.toFixed(2)}</td>
       <td>${currentPriceStr}</td>
@@ -326,7 +458,7 @@ function renderTopHoldings(positions) {
     }
 
     row.innerHTML = `
-      <td>${pos.ticker}</td>
+      <td><span class="ticker" onclick="openTickerModal('${pos.ticker}')">${pos.ticker}</span></td>
       <td>${pos.shares_held}</td>
       <td>${marketValueStr}</td>
       <td>${unrealizedPnlStr}</td>
@@ -503,7 +635,7 @@ function renderTransactionTable(transactions) {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${t.action}</td>
-      <td>${t.ticker}</td>
+      <td><span class="ticker" onclick="openTickerModal('${t.ticker}')">${t.ticker}</span></td>
       <td>${t.quantity}</td>
       <td>$${t.price.toFixed(2)}</td>
       <td>$${t.totalValue.toFixed(2)}</td>
