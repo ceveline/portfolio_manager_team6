@@ -626,6 +626,16 @@ if (holdingForm) {
 
     try {
       await buyStock(ticker, quantity, purchasePrice, purchaseDate);
+      const buyMessage = document.getElementById("buy-success-message");
+
+if (buyMessage) {
+  buyMessage.textContent = `Successfully bought ${quantity} shares of ${ticker}`;
+  buyMessage.classList.remove("d-none");
+  setTimeout(() => {
+     
+  buyMessage.classList.add("d-none");
+}, 4000);
+}
       e.target.reset();
       const purchasePriceEl = document.getElementById("purchase_price");
       if (purchasePriceEl) purchasePriceEl.textContent = "-";
@@ -669,7 +679,15 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   if (sellDate) url.searchParams.append("sell_date", sellDate);
 
   await fetch(url, { method: "DELETE" });
+const sellMessage = document.getElementById("sell-success-message");
 
+if (sellMessage) {
+  sellMessage.textContent = `Successfully sold ${quantity} shares of ${ticker}`;
+  sellMessage.classList.remove("d-none");
+  setTimeout(() => {
+    sellMessage.classList.add("d-none");
+  }, 4000);
+}
   e.target.reset();
   resetHistoryFilter();
   loadPortfolio();
