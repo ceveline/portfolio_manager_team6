@@ -3,7 +3,7 @@ body {
   background-color: f1f5f9;
   color: #1f2937;
   margin: 0;
-  padding: 2rem;
+  padding: 0;
 }
 
 main {
@@ -308,7 +308,7 @@ main section {
 .top-banner{
     background: linear-gradient(90deg,#0f172a,#1e293b);
     padding:18px 32px;
-    margin:-2rem -2rem 2rem -2rem;
+    margin: 0 0 2rem 0;
 }
 
 .top-banner-content{

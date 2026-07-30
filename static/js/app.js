@@ -18,6 +18,19 @@ let refreshTimer = null;
 let refreshPanel = null;
 let refreshing = false;
 
+function switchTab(tabName) {
+  event.preventDefault();
+
+  // Update active nav item
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(item => item.classList.remove('active'));
+
+  const clickedItem = document.querySelector(`.nav-item[onclick*="${tabName}"]`);
+  if (clickedItem) {
+    clickedItem.classList.add('active');
+  }
+}
+
 async function loadPortfolio(filters = {}) {
   
   const holdingsRes = await fetch(`${API_BASE}/holdings`);

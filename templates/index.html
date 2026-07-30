@@ -7,8 +7,142 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --color-accent: #0D9488;
+      --color-border: #E5E7EB;
+    }
+
+    body {
+      display: flex;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+    }
+
+    .sidebar {
+      width: 280px;
+      background: linear-gradient(90deg, #0f172a, #1e293b);
+      border-right: 1px solid var(--color-border);
+      padding: 2rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 2rem;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: white;
+      text-decoration: none;
+      margin-bottom: 1.5rem;
+    }
+
+    .nav-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .nav-section-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 1rem;
+      padding: 0 1rem;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: #cbd5e1;
+      text-decoration: none;
+      font-size: 0.875rem;
+      border: 1px solid transparent;
+    }
+
+    .nav-item:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .nav-item.active {
+      background-color: var(--color-accent);
+      color: white;
+      border-color: var(--color-accent);
+      font-weight: 600;
+    }
+
+    .main-wrapper {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
 </head>
 <body>
+  <aside class="sidebar">
+    <a href="#" class="logo">
+      <i class="ti ti-building-bank"></i>
+      <span>Portfolio Manager</span>
+    </a>
+
+    <nav class="nav-section">
+      <div class="nav-section-title">Main</div>
+      <a href="#" onclick="switchTab('dashboard')" class="nav-item active">
+        <i class="ti ti-layout-dashboard"></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" onclick="switchTab('holdings')" class="nav-item">
+        <i class="ti ti-briefcase"></i>
+        <span>Holdings</span>
+      </a>
+      <a href="#" onclick="switchTab('performance')" class="nav-item">
+        <i class="ti ti-chart-line"></i>
+        <span>Performance</span>
+      </a>
+      <a href="#" onclick="switchTab('transactions')" class="nav-item">
+        <i class="ti ti-history"></i>
+        <span>Transactions</span>
+      </a>
+    </nav>
+
+    <nav class="nav-section">
+      <div class="nav-section-title">Actions</div>
+      <a href="#" onclick="switchTab('buy')" class="nav-item">
+        <i class="ti ti-plus"></i>
+        <span>Buy Stock</span>
+      </a>
+      <a href="#" onclick="switchTab('sell')" class="nav-item">
+        <i class="ti ti-minus"></i>
+        <span>Sell Stock</span>
+      </a>
+    </nav>
+
+    <nav class="nav-section">
+      <div class="nav-section-title">Discover</div>
+      <a href="#" onclick="switchTab('watchlist')" class="nav-item">
+        <i class="ti ti-star"></i>
+        <span>Watchlist</span>
+      </a>
+    </nav>
+  </aside>
+
+  <div class="main-wrapper">
 <div class="top-banner">
   <div class="top-banner-content">
 
@@ -535,5 +669,6 @@
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </div>
 </body>
 </html>
