@@ -1,118 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Portfolio Manager — Complete Dashboard</title>
+  <meta charset="UTF-8" />
+  <title>Portfolio Manager</title>
+  <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
-      --color-bg-primary: #F8F9FB;
-      --color-bg-secondary: #FFFFFF;
-      --color-bg-tertiary: #F3F4F6;
-      --color-border: #E5E7EB;
-      --color-text-primary: #1F2937;
-      --color-text-secondary: #6B7280;
-      --color-text-tertiary: #9CA3AF;
       --color-accent: #0D9488;
-      --color-accent-light: #D1FAE5;
-      --color-gain: #059669;
-      --color-loss: #DC2626;
-      --color-warning: #F59E0B;
-      --color-shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-      --color-shadow-md: 0 4px 6px rgba(0,0,0,0.07);
-      --color-shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
-
-      --type-scale-xs: 0.75rem;
-      --type-scale-sm: 0.875rem;
-      --type-scale-base: 1rem;
-      --type-scale-lg: 1.125rem;
-      --type-scale-xl: 1.5rem;
-      --type-scale-2xl: 2rem;
-
-      --spacing-xs: 0.25rem;
-      --spacing-sm: 0.5rem;
-      --spacing-md: 1rem;
-      --spacing-lg: 1.5rem;
-      --spacing-xl: 2rem;
-      --spacing-2xl: 3rem;
-    }
-
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html {
-      font-family: system-ui, -apple-system, sans-serif;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
+      --color-border: #E5E7EB;
     }
 
     body {
-      background-color: var(--color-bg-primary);
-      color: var(--color-text-primary);
-      line-height: 1.6;
-      font-size: var(--type-scale-base);
-    }
-
-    .container {
       display: flex;
       height: 100vh;
-      overflow: hidden;
+      margin: 0;
+      padding: 0;
     }
 
-    /* Sidebar */
     .sidebar {
-      width: 280px;
+      width: 240px;
       background: linear-gradient(90deg, #0f172a, #1e293b);
       border-right: 1px solid var(--color-border);
-      padding: var(--spacing-xl);
+      padding: 2rem;
       overflow-y: auto;
       display: flex;
       flex-direction: column;
-      gap: var(--spacing-xl);
+      gap: 2rem;
     }
 
     .logo {
       display: flex;
       align-items: center;
-      gap: var(--spacing-md);
-      font-size: var(--type-scale-lg);
+      gap: 1rem;
+      font-size: 1.125rem;
       font-weight: 700;
       color: white;
       text-decoration: none;
-      margin-bottom: var(--spacing-lg);
+      margin-bottom: 1.5rem;
     }
 
     .nav-section {
       display: flex;
       flex-direction: column;
-      gap: var(--spacing-sm);
+      gap: 0.5rem;
     }
 
     .nav-section-title {
-      font-size: var(--type-scale-xs);
+      font-size: 0.75rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #94a3b8;
-      margin-bottom: var(--spacing-md);
-      padding: 0 var(--spacing-md);
+      margin-bottom: 1rem;
+      padding: 0 1rem;
     }
 
     .nav-item {
       display: flex;
       align-items: center;
-      gap: var(--spacing-md);
-      padding: var(--spacing-md);
+      gap: 1rem;
+      padding: 1rem;
       border-radius: 6px;
       cursor: pointer;
       transition: all 0.2s ease;
       color: #cbd5e1;
       text-decoration: none;
-      font-size: var(--type-scale-sm);
+      font-size: 0.875rem;
       border: 1px solid transparent;
     }
 
@@ -128,1028 +84,637 @@
       font-weight: 600;
     }
 
-    /* Main Content */
-    .main-content {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .header {
-      background-color: var(--color-bg-secondary);
-      border-bottom: 1px solid var(--color-border);
-      padding: var(--spacing-xl);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .header-title {
-      font-size: var(--type-scale-2xl);
-      font-weight: 700;
-      color: var(--color-text-primary);
-    }
-
-    .header-actions {
-      display: flex;
-      gap: var(--spacing-md);
-      align-items: center;
-    }
-
-    .btn {
-      padding: var(--spacing-sm) var(--spacing-lg);
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-size: var(--type-scale-sm);
-      font-weight: 600;
-      transition: all 0.2s ease;
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-    }
-
-    .btn-primary {
-      background-color: var(--color-accent);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      background-color: #0C8176;
-      box-shadow: var(--color-shadow-md);
-    }
-
-    .btn-secondary {
-      background-color: var(--color-bg-tertiary);
-      color: var(--color-text-primary);
-      border: 1px solid var(--color-border);
-    }
-
-    .btn-secondary:hover {
-      background-color: var(--color-border);
-    }
-
-    .btn-buy {
-      background-color: var(--color-accent);
-      color: white;
-      border: none;
-    }
-
-    .btn-buy:hover {
-      background-color: #0C8176;
-      box-shadow: var(--color-shadow-md);
-    }
-
-    .btn-sell {
-      background-color: var(--color-accent);
-      color: white;
-      border: none;
-    }
-
-    .btn-sell:hover {
-      background-color: #0C8176;
-      box-shadow: var(--color-shadow-md);
-    }
-
-    .btn-outline {
-      background-color: transparent;
-      color: var(--color-text-primary);
-      border: 1px solid var(--color-border);
-      padding: var(--spacing-sm) var(--spacing-md);
-    }
-
-    .btn-outline:hover {
-      background-color: var(--color-bg-tertiary);
-      border-color: var(--color-accent);
-      color: var(--color-accent);
-    }
-
-    .btn-outline.active {
-      background-color: var(--color-accent);
-      color: white;
-      border-color: var(--color-accent);
-    }
-
-    .refresh-btn {
-      background-color: var(--color-bg-tertiary);
-      color: var(--color-text-primary);
-      border: 1px solid var(--color-border);
-      display: flex;
-      align-items: center;
-      gap: var(--spacing-sm);
-    }
-
-    .refresh-btn:hover {
-      background-color: var(--color-border);
-      border-color: var(--color-accent);
-    }
-
-    /* Content Area */
-    .content {
+    .main-wrapper {
       flex: 1;
       overflow-y: auto;
-      padding: var(--spacing-2xl);
-    }
-
-    .section-panel {
-      display: none;
-    }
-
-    .section-panel.active {
-      display: block;
-    }
-
-    .card {
-      background-color: var(--color-bg-secondary);
-      border: 1px solid var(--color-border);
-      border-radius: 8px;
-      padding: var(--spacing-lg);
-      box-shadow: var(--color-shadow-sm);
-      margin-bottom: var(--spacing-xl);
-    }
-
-    .section-title {
-      font-size: var(--type-scale-xl);
-      font-weight: 700;
-      color: var(--color-text-primary);
-      margin-bottom: var(--spacing-lg);
       display: flex;
-      align-items: center;
-      gap: var(--spacing-md);
+      flex-direction: column;
+      margin: 0;
+      padding: 0;
     }
 
-    .section-title::before {
-      content: '';
-      width: 4px;
-      height: 24px;
-      background-color: var(--color-accent);
-      border-radius: 2px;
-    }
-
-    .table-container {
-      background-color: var(--color-bg-secondary);
-      border: 1px solid var(--color-border);
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: var(--color-shadow-sm);
-      margin-bottom: var(--spacing-xl);
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: var(--type-scale-sm);
-    }
-
-    thead {
-      background-color: var(--color-bg-tertiary);
-      border-bottom: 1px solid var(--color-border);
-    }
-
-    th {
-      padding: var(--spacing-md) var(--spacing-lg);
-      text-align: left;
-      font-weight: 600;
-      color: var(--color-text-secondary);
-      text-transform: uppercase;
-      font-size: var(--type-scale-xs);
-      letter-spacing: 0.05em;
-    }
-
-    tbody tr {
-      border-bottom: 1px solid var(--color-border);
-      transition: background-color 0.2s ease;
-    }
-
-    tbody tr:nth-child(even) {
-      background-color: var(--color-bg-tertiary);
-    }
-
-    tbody tr:hover {
-      background-color: var(--color-accent-light);
-    }
-
-    td {
-      padding: var(--spacing-md) var(--spacing-lg);
-      color: var(--color-text-primary);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .ticker {
-      font-weight: 600;
-      color: var(--color-accent);
-    }
-
-    .positive {
-      color: var(--color-gain);
-      font-weight: 600;
-    }
-
-    .negative {
-      color: var(--color-loss);
-      font-weight: 600;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: var(--spacing-xs) var(--spacing-md);
-      border-radius: 20px;
-      font-size: var(--type-scale-xs);
-      font-weight: 600;
-      background-color: var(--color-bg-tertiary);
-      color: var(--color-text-secondary);
-    }
-
-    .badge.gain {
-      background-color: rgba(5, 150, 105, 0.1);
-      color: var(--color-gain);
-    }
-
-    .badge.loss {
-      background-color: rgba(220, 38, 38, 0.1);
-      color: var(--color-loss);
-    }
-
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: var(--spacing-lg);
-      margin-bottom: var(--spacing-xl);
-    }
-
-    .stat-card {
-      background-color: var(--color-bg-secondary);
-      border: 1px solid var(--color-border);
-      border-radius: 8px;
-      padding: var(--spacing-lg);
-    }
-
-    .stat-label {
-      font-size: var(--type-scale-sm);
-      color: var(--color-text-secondary);
-      margin-bottom: var(--spacing-sm);
-      font-weight: 600;
-    }
-
-    .stat-value {
-      font-size: var(--type-scale-xl);
-      font-weight: 700;
-      color: var(--color-text-primary);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .profile-modal {
-      display: none;
-      position: fixed;
-      z-index: 9999;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.5);
-    }
-
-    .profile-modal-content {
-      width: 400px;
-      background: white;
-      margin: 8% auto;
-      padding: 30px;
-      border-radius: 12px;
-      position: relative;
-    }
-
-    .close-profile,
-    .close-support {
-      position: absolute;
-      top: 15px;
-      right: 20px;
-      font-size: 30px;
-      cursor: pointer;
-      color: var(--color-text-secondary);
-    }
-
-    .close-profile:hover,
-    .close-support:hover {
-      color: var(--color-text-primary);
-    }
-
-    @media (max-width: 768px) {
-      .container {
-        flex-direction: column;
-      }
-
-      .sidebar {
-        width: 100%;
-        height: auto;
-        border-right: none;
-        border-bottom: 1px solid var(--color-border);
-        flex-direction: row;
-        overflow-x: auto;
-      }
-    }
-
-    ::-webkit-scrollbar {
-      width: 8px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: var(--color-bg-primary);
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: var(--color-border);
-      border-radius: 4px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: var(--color-text-tertiary);
-    }
-
-    .d-none {
-      display: none !important;
-    }
-
-    .hidden-filter {
-      display: none !important;
-    }
-
-    .row {
+    #portfolio-metrics {
       display: flex;
-      flex-wrap: wrap;
-      margin-right: -0.5rem;
-      margin-left: -0.5rem;
-    }
-
-    .col-md-2 {
-      flex: 0 0 16.66667%;
-      padding-right: 0.5rem;
-      padding-left: 0.5rem;
-    }
-
-    .col-12 {
-      flex: 0 0 100%;
-      padding: 0.5rem;
-    }
-
-    .g-3 {
-      /* gap spacing handled by column padding */
-    }
-
-    .mb-3 {
-      margin-bottom: var(--spacing-lg);
-    }
-
-    .mt-3 {
-      margin-top: var(--spacing-lg);
-    }
-
-    .mt-2 {
-      margin-top: var(--spacing-sm);
-    }
-
-    .form-label {
-      font-size: var(--type-scale-sm);
-      font-weight: 600;
-      color: var(--color-text-secondary);
-      margin-bottom: var(--spacing-sm);
-      display: block;
-    }
-
-    .form-control {
-      width: 100%;
-      padding: var(--spacing-sm);
-      border: 1px solid var(--color-border);
-      border-radius: 6px;
-      font-size: var(--type-scale-sm);
-    }
-
-    .form-select {
-      width: 100%;
-      padding: var(--spacing-sm);
-      border: 1px solid var(--color-border);
-      border-radius: 6px;
-      font-size: var(--type-scale-sm);
-    }
-
-    .d-flex {
-      display: flex;
-    }
-
-    .gap-2 {
-      gap: var(--spacing-sm);
-    }
-
-    .justify-content-between {
+      gap: 1rem;
       justify-content: space-between;
+      flex-wrap: wrap;
     }
 
-    .align-items-center {
-      align-items: center;
+    #portfolio-metrics .col-md-2 {
+      flex: 1 1 calc(16.66% - 1rem);
+      min-width: 0;
     }
 
-    .table-responsive {
-      overflow-x: auto;
+    #portfolio-metrics .card-body {
+      text-align: left;
     }
 
-    .table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-bottom: 0;
+    @media (max-width: 1200px) {
+      #portfolio-metrics .col-md-2 {
+        flex: 1 1 calc(16.66% - 1rem);
+      }
     }
 
-    .table-vcenter {
-      vertical-align: middle;
+    @media (max-width: 600px) {
+      #portfolio-metrics .col-md-2 {
+        flex: 1 1 100%;
+      }
     }
 
-    .table-striped tbody tr:nth-child(even) {
-      background-color: var(--color-bg-tertiary);
-    }
-
-    .table-striped tbody tr:hover {
-      background-color: var(--color-accent-light);
-    }
-
-    .text-muted {
-      color: var(--color-text-secondary);
-    }
-
-    .filter-symbol {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 12px;
-      border: 1px solid var(--color-border);
-      border-radius: 4px;
-      background-color: var(--color-bg-secondary);
-      user-select: none;
-      transition: background-color 0.2s;
-    }
-
-    .filter-symbol:hover {
-      background-color: var(--color-bg-tertiary);
-    }
-
-    th.sortable {
-      cursor: pointer;
-      user-select: none;
-      white-space: nowrap;
-    }
-
-    th.sortable:hover {
-      background-color: #e2e8f0 !important;
-    }
-
-    .sort-indicator {
-      display: inline-block;
-      width: 1em;
-      text-align: center;
-      font-size: 0.75em;
-      vertical-align: middle;
-      margin-left: 4px;
-    }
-
-    th.sortable.asc .sort-indicator::after {
-      content: "↑";
-      color: var(--color-text-primary);
-      font-weight: bold;
-    }
-
-    th.sortable.desc .sort-indicator::after {
-      content: "↓";
-      color: var(--color-text-primary);
-      font-weight: bold;
-    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <!-- Sidebar -->
-    <aside class="sidebar">
-      <a href="#" class="logo">
-        <i class="ti ti-building-bank" style="font-size: var(--type-scale-lg);"></i>
-        <span>Portfolio Manager</span>
+  <aside class="sidebar">
+    <a href="#" class="logo">
+      <i class="ti ti-building-bank"></i>
+      <span>Portfolio Manager</span>
+    </a>
+
+    <nav class="nav-section">
+      <div class="nav-section-title">Main</div>
+      <a href="#" onclick="switchTab('dashboard', event)" class="nav-item active">
+        <i class="ti ti-layout-dashboard"></i>
+        <span>Dashboard</span>
       </a>
+      <a href="#" onclick="switchTab('holdings', event)" class="nav-item">
+        <i class="ti ti-briefcase"></i>
+        <span>Holdings</span>
+      </a>
+      <a href="#" onclick="switchTab('performance', event)" class="nav-item">
+        <i class="ti ti-chart-line"></i>
+        <span>Performance</span>
+      </a>
+      <a href="#" onclick="switchTab('transactions', event)" class="nav-item">
+        <i class="ti ti-history"></i>
+        <span>Transactions</span>
+      </a>
+    </nav>
 
-      <nav class="nav-section">
-        <div class="nav-section-title">Main</div>
-        <a href="#" onclick="switchTab('dashboard')" class="nav-item active">
-          <i class="ti ti-layout-dashboard"></i>
-          <span>Dashboard</span>
-        </a>
-        <a href="#" onclick="switchTab('holdings')" class="nav-item">
-          <i class="ti ti-briefcase"></i>
-          <span>Holdings</span>
-        </a>
-        <a href="#" onclick="switchTab('performance')" class="nav-item">
-          <i class="ti ti-chart-line"></i>
-          <span>Performance</span>
-        </a>
-        <a href="#" onclick="switchTab('transactions')" class="nav-item">
-          <i class="ti ti-history"></i>
-          <span>Transactions</span>
-        </a>
-      </nav>
+    <nav class="nav-section">
+      <div class="nav-section-title">Actions</div>
+      <a href="#" onclick="switchTab('buy', event)" class="nav-item">
+        <i class="ti ti-plus"></i>
+        <span>Buy Stock</span>
+      </a>
+      <a href="#" onclick="switchTab('sell', event)" class="nav-item">
+        <i class="ti ti-minus"></i>
+        <span>Sell Stock</span>
+      </a>
+    </nav>
 
-      <nav class="nav-section">
-        <div class="nav-section-title">Actions</div>
-        <a href="#" onclick="switchTab('buy')" class="nav-item">
-          <i class="ti ti-plus"></i>
-          <span>Buy Stock</span>
-        </a>
-        <a href="#" onclick="switchTab('sell')" class="nav-item">
-          <i class="ti ti-minus"></i>
-          <span>Sell Stock</span>
-        </a>
-      </nav>
+    <nav class="nav-section">
+      <div class="nav-section-title">Discover</div>
+      <a href="#" onclick="switchTab('watchlist', event)" class="nav-item">
+        <i class="ti ti-star"></i>
+        <span>Watchlist</span>
+      </a>
+    </nav>
+  </aside>
 
-      <nav class="nav-section">
-        <div class="nav-section-title">Discover</div>
-        <a href="#" onclick="switchTab('watchlist')" class="nav-item">
-          <i class="ti ti-star"></i>
-          <span>Watchlist</span>
-        </a>
-      </nav>
+  <div class="main-wrapper">
+<div class="top-banner">
+  <div class="top-banner-content">
 
-    </aside>
+    <div class="company-logo">
+      <i class="ti ti-building-bank"></i>
+      Portfolio Manager
+    </div>
 
-    <!-- Main Content -->
-    <div class="main-content">
-      <!-- Header -->
-      <header class="header">
-        <h1 class="header-title" id="section-title">Dashboard</h1>
-        <div class="header-actions">
-          <div style="display: flex; align-items: center; gap: var(--spacing-lg);">
-            <!-- Action Buttons -->
-            <button class="btn btn-buy" onclick="showBuyAlert()" title="Buy Stocks">
-              Buy
-            </button>
-            <button class="btn btn-sell" onclick="showSellAlert()" title="Sell Stocks">
-              Sell
-            </button>
+    <div class="company-subtitle">
+      Wealth Management Dashboard
+    </div>
 
-            <!-- Refresh Button -->
-            <button id="refresh-data-btn" class="btn refresh-btn" onclick="toggleRefreshOptions()" title="Refresh Settings">
-              <i class="ti ti-settings"></i>
-              <span>Refresh Settings</span>
-            </button>
+  </div>
+</div>
 
-            <!-- User Profile -->
-            <div style="display: flex; align-items: center; gap: var(--spacing-md);">
-              <div style="width: 40px; height: 40px; background: linear-gradient(135deg, var(--color-accent), #06B6D4); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 0.9rem;">JD</div>
-              <div style="display: flex; flex-direction: column;">
-                <div style="font-weight: 600; font-size: var(--type-scale-sm);">John Doe</div>
-                <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                  <a href="#" onclick="document.getElementById('profile-modal').style.display='block'; return false;" style="font-size: var(--type-scale-xs); color: var(--color-accent); text-decoration: none;">Settings</a>
-                  <a href="#" onclick="document.getElementById('support-modal').style.display='block'; return false;" style="font-size: var(--type-scale-xs); color: var(--color-accent); text-decoration: none;">Support</a>
-                </div>
-              </div>
+  <header class="dashboard-header">
+
+  <div class="header-top">
+    <div class="header-banner">
+  <h1>My Portfolio</h1>
+  <p class="text-muted">
+    Monitor holdings, performance, and portfolio insights
+  </p>
+</div>
+
+  <div class="profile-section">
+
+  <div class="profile-top">
+    <div class="profile-avatar">
+      JD
+    </div>
+
+    <div class="profile-details">
+        <div class="profile-name">John Doe</div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.05rem; font-size: 0.875rem; line-height: 1;">
+          <a href="#" id="settings-btn" onclick="openModal('settings-modal'); return false;">Settings</a>
+          <a href="#" id="support-btn" onclick="openModal('support-modal'); return false;">Support</a>
+        </div>
+    </div>
+
+  </div>
+
+
+</div>
+
+
+  </div>
+
+    <div id="portfolio-metrics" class="row row-cards mb-2">
+      <div class="col-md-2">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="metric-label">
+              <div class="text-muted small">COST BASIS</div>
             </div>
+            <div class="h3 mb-2" id="metrics-cost-basis">$45K</div>
+            <div class="text-muted small">Total invested</div>
           </div>
         </div>
-      </header>
+      </div>
 
-      <!-- Refresh Options Panel -->
-      <div id="refresh-options-panel" style="display: none; padding: var(--spacing-lg); background-color: var(--color-bg-secondary); border-bottom: 1px solid var(--color-border);">
-        <div style="display: flex; gap: var(--spacing-lg); align-items: flex-end; max-width: 500px;">
-          <div>
-            <label class="form-label">Auto Refresh Interval</label>
-            <select id="refresh-filter-action" class="form-control" style="width: 200px;">
-              <option value="60000">1 minute</option>
-              <option value="120000">2 minutes</option>
-              <option value="180000">3 minutes</option>
-              <option value="0">Disable</option>
+      <div class="col-md-2">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="metric-label">
+              <div class="text-muted small">MARKET VALUE</div>
+            </div>
+            <div class="h3 mb-2" id="metrics-market-value">$52.3K</div>
+            <div class="text-success small" id="metrics-market-gain">↑ $7.3K<br>(6 holdings)</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="metric-label">
+              <div class="text-muted small">UNREALIZED P&L</div>
+            </div>
+            <div class="h3 mb-2" id="metrics-unrealized-pnl">$6.2K</div>
+            <div class="text-success small" id="metrics-unrealized-pct">+13.9%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="metric-label">
+              <div class="text-muted small">REALIZED P&L</div>
+            </div>
+            <div class="h3 mb-2" id="metrics-realized-pnl">$1.1K</div>
+            <div class="text-muted small">From closed trades</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="metric-label">
+              <div class="text-muted small">TOTAL RETURN</div>
+            </div>
+            <div class="h3 mb-2 text-success" id="metrics-total-return">+16.3%</div>
+            <div class="text-muted small" id="metrics-total-return-amount">↑ $7.3K</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-2">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="metric-label">
+              <div class="text-muted small">WIN RATE</div>
+            </div>
+            <div class="h3 mb-2">68%</div>
+            <div class="text-muted small">13 of 19 trades</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="date-time">
+      <div id="date">
+        <p>Date: </p><span id="current-date"></span>
+      </div>
+      <span id="current-time"></span>
+    </div>
+  </header>
+
+  <main>
+
+    <section id="buy" class="card mb-4 d-none">
+  <div class="card-body">
+    <h2 class="card-title">Buy Stock</h2>
+
+    <form id="holding-form" class="row g-3">
+
+      <div class="col-md-4">
+        <label class="form-label">Stock</label>
+        <select id="ticker" class="form-select" required>
+          <option value="">Select a ticker...</option>
+          <option value="AAPL">AAPL - Apple</option>
+          <option value="GOOGL">GOOGL - Google</option>
+          <option value="MSFT">MSFT - Microsoft</option>
+          <option value="TSLA">TSLA - Tesla</option>
+          <option value="META">META - Meta</option>
+          <option value="AMZN">AMZN - Amazon</option>
+          <option value="NVDA">NVDA - NVIDIA</option>
+          <option value="SPY">SPY - S&P 500 ETF</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Quantity</label>
+        <input
+          type="number"
+          id="quantity"
+          class="form-control"
+          placeholder="Quantity"
+          step="1"
+          min="1"
+          required
+        />
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Current Price</label>
+        <div id="buy-details" class="form-control bg-light">
+          <div id="buy-price-display">
+            <strong id="purchase_price">-</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-2 d-flex align-items-end">
+        <button id="buy-btn" class="btn btn-success w-100" type="submit">
+          Buy
+        </button>
+      </div>
+
+    </form>
+  </div>
+</section>
+
+
+<section id="sell" class="card mb-4 d-none">
+  <div class="card-body">
+    <h2 class="card-title">Sell Stock</h2>
+
+    <form id="sell-form" class="row g-3">
+
+      <div class="col-md-4">
+        <label class="form-label">Stock</label>
+        <select id="sell-ticker" class="form-select" required>
+          <option value="">Select a stock to sell...</option>
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Quantity</label>
+        <input
+          type="number"
+          id="sell-quantity-input"
+          class="form-control"
+          placeholder="Quantity to sell"
+          step="1"
+          min="1"
+          required
+        />
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label">Details</label>
+        <div id="sell-details" class="form-control bg-light">
+          <div id="sell-quantity-display">
+            Available:
+            <strong id="sell-quantity">-</strong>
+          </div>
+          <div id="sell-price-display">
+            Current Price:
+            <strong id="sell-price">-</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-2 d-flex align-items-end">
+        <button id="sell-btn" class="btn btn-danger w-100" type="submit">
+          Sell
+        </button>
+      </div>
+
+    </form>
+  </div>
+</section>
+
+<section id="holdings" class="card mb-4">
+  <div class="card-body">
+
+    <div class="portfolio-header">
+
+        <div>
+            <h2 class="card-title mb-0">Portfolio</h2>
+        </div>
+
+        <button id="refresh-data-btn" type="button" class="btn refresh-btn">
+            <i class="ti ti-settings"></i>
+            <span>Refresh Settings</span>
+        </button>
+
+    </div>
+
+
+<div id="refresh-options-panel" class="row g-3 mt-3 d-none">
+
+    <div class="col-md-3">
+        <label class="form-label">Refresh Duration</label>
+
+        <select id="refresh-filter-action" class="form-select">
+            <option value="60000">1 minute</option>
+            <option value="120000">2 minutes</option>
+            <option value="180000">3 minutes</option>
+        </select>
+    </div>
+
+    <div class="col-12">
+        <button id="apply-refresh-btn" 
+                type="button" 
+                class="btn btn-primary">
+            Apply
+        </button>
+    </div>
+
+</div>
+
+    
+    <div id="portfolio-stats" class="row row-cards mb-4">
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body">
+            <div class="text-muted">Total Cost Basis</div>
+            <div id="portfolio-cost-basis" class="h3 mb-0">$0.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body">
+            <div class="text-muted">Market Value</div>
+            <div id="portfolio-market-value" class="h3 mb-0">$0.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body">
+            <div class="text-muted">Unrealized P&L</div>
+            <div id="portfolio-unrealized-pnl" class="h3 mb-0">$0.00</div>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card">
+          <div class="card-body">
+            <div class="text-muted">Total Return %</div>
+            <div id="portfolio-total-return" class="h3 mb-0">0.00%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-responsive">
+      <table id="consolidated-table" class="table table-vcenter table-striped">
+        <thead>
+          <tr>
+            <th class="sortable" data-sort="ticker">Ticker <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="shares_held">Quantity <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="avg_cost">Avg Cost <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="current_price">Current Price <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="cost_basis">Cost Basis <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="market_value">Market Value <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="unrealized_pnl">Unrealized P&L <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="realized_pnl">Realized P&L <span class="sort-indicator"></span></th>
+          </tr>
+        </thead>
+        <tbody id="consolidated-body">
+            <tr class="empty-state">
+              <td colspan="8">No portfolio data yet.</td>
+            </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="row mt-4">
+  <div class="col-md-6">
+    <h5>Portfolio Allocation</h5>
+    <canvas id="portfolio-pie-chart"></canvas>
+  </div>
+
+  <div class="col-md-6">
+    <h5>Total P&L by Holding</h5>
+    <canvas id="pnl-bar-chart"></canvas>
+  </div>
+</div>
+  </div>
+</section>
+
+<section id="performance" class="card mb-4 d-none">
+  <div class="card-body">
+    <h2 class="card-title mb-3">Performance Chart</h2>
+
+    <div class="mb-4">
+      <div class="btn-group mb-3" role="group">
+        <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="1m">1M</button>
+        <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="3m">3M</button>
+        <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="6m">6M</button>
+        <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="1y">1Y</button>
+        <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="ytd">YTD</button>
+        <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="5y">5Y</button>
+        <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="10y">10Y</button>
+        <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="all">All Time</button>
+      </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+      <div class="col-md-3">
+        <label class="form-label">Start Date</label>
+        <input type="date" id="perf-start-date" class="form-control" />
+      </div>
+      <div class="col-md-3">
+        <label class="form-label">End Date</label>
+        <input type="date" id="perf-end-date" class="form-control" />
+      </div>
+      <div class="col-md-6 d-flex align-items-end gap-2">
+        <button id="perf-load-btn" class="btn btn-primary">Load Performance</button>
+      </div>
+    </div>
+
+    <div id="performance-chart-container" class="mt-4">
+      <canvas id="performance-chart"></canvas>
+    </div>
+  </div>
+</section>
+
+<section id="transactions" class="card mb-4 d-none">
+  <div class="card-body">
+    <h2 class="card-title mb-3">Transaction History</h2>
+
+    <form id="history-filter-form" class="row g-3 mb-3">
+      <!-- Filter Toggle Button Container -->
+        <div class="filter-symbol" id="filter-toggle-btn" style="cursor: pointer;">
+          <i class="ti ti-filter"></i>
+          <div class="text-muted">Filter</div>
+        </div>
+
+        <!-- Filtering Options Panel (Hidden by default using Bootstrap's d-none) -->
+        <div id="filter-options-panel" class="row g-3 mt-3 d-none">
+          <div class="col-md-2">
+            <label class="form-label">Action</label>
+            <select id="history-filter-action" class="form-control">
+              <option value="">All</option>
+              <option value="buy">Buy</option>
+              <option value="sell">Sell</option>
             </select>
           </div>
-          <button id="apply-refresh-btn" class="btn btn-primary">Apply</button>
-        </div>
-      </div>
-
-      <!-- Content -->
-      <div class="content">
-        <!-- DASHBOARD TAB -->
-        <div id="dashboard" class="section-panel active">
-
-          <div class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Total Value</div>
-              <div class="stat-value" id="total-value">$0.00</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Total Shares</div>
-              <div class="stat-value" id="total-shares">0</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Number of Holdings</div>
-              <div class="stat-value" id="total-holdings">0</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Gain/Loss</div>
-              <div class="stat-value" id="total-gain-loss">$0.00 (0.00%)</div>
-            </div>
+          <div class="col-md-2">
+            <label class="form-label">Ticker</label>
+            <select id="history-filter-ticker" class="form-control">
+              <option value="">All</option>
+              <option value="aapl">AAPL</option>
+              <option value="googl">GOOGL</option>
+              <option value="msft">MSFT</option>
+              <option value="tsla">TSLA</option>
+              <option value="meta">META</option>
+              <option value="amzn">AMZN</option>
+              <option value="nvda">NVDA</option>
+              <option value="spy">SPY</option>
+            </select>
           </div>
-
-          <div class="table-container">
-            <table id="top-holdings-table">
-              <thead>
-                <tr>
-                  <th>Ticker</th>
-                  <th>Shares</th>
-                  <th>Current Price</th>
-                  <th>Market Value</th>
-                  <th>Unrealized P&L</th>
-                </tr>
-              </thead>
-              <tbody id="top-holdings-body">
-                <tr><td colspan="5" style="text-align: center; padding: 2rem;">Loading...</td></tr>
-              </tbody>
-            </table>
+          <div class="col-md-2">
+            <label class="form-label">Qty</label>
+            <select id="history-filter-quantity-operator" class="form-select">
+              <option value="">Any</option>
+              <option value=">">&gt;</option>
+              <option value=">=">&gt;=</option>
+              <option value="<">&lt;</option>
+              <option value="<=">&lt;=</option>
+              <option value="=">=</option>
+            </select>
+            <input type="number" id="history-filter-quantity" class="form-control mt-2" step="any" placeholder="Qty" />
           </div>
-        </div>
-
-        <!-- HOLDINGS TAB -->
-        <div id="holdings" class="section-panel">
-          <div id="portfolio-stats" class="stats-grid">
-            <div class="stat-card">
-              <div class="stat-label">Cost Basis</div>
-              <div id="portfolio-cost-basis" class="stat-value">$0.00</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Market Value</div>
-              <div id="portfolio-market-value" class="stat-value">$0.00</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Unrealized P&L</div>
-              <div id="portfolio-unrealized-pnl" class="stat-value">$0.00</div>
-            </div>
-            <div class="stat-card">
-              <div class="stat-label">Total Return %</div>
-              <div id="portfolio-total-return" class="stat-value">0.00%</div>
-            </div>
+          <div class="col-md-2">
+            <label class="form-label">Price</label>
+            <select id="history-filter-price-operator" class="form-select">
+              <option value="">Any</option>
+              <option value=">">&gt;</option>
+              <option value=">=">&gt;=</option>
+              <option value="<">&lt;</option>
+              <option value="<=">&lt;=</option>
+              <option value="=">=</option>
+            </select>
+            <input type="text" id="history-filter-price" class="form-control mt-2" placeholder="300" />
           </div>
-          <div class="table-container">
-            <table id="consolidated-table">
-              <thead>
-                <tr>
-                  <th class="sortable" data-sort="ticker">Ticker <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="shares_held">Shares <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="avg_cost">Avg Cost <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="current_price">Current Price <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="cost_basis">Cost Basis <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="market_value">Market Value <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="unrealized_pnl">Unrealized P&L <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="realized_pnl">Realized P&L <span class="sort-indicator"></span></th>
-                </tr>
-              </thead>
-              <tbody id="consolidated-body">
-                <tr><td colspan="8" style="text-align: center; padding: 2rem;">Loading...</td></tr>
-              </tbody>
-            </table>
+          <div class="col-md-2">
+            <label class="form-label">Total Value</label>
+            <select id="history-filter-price-range" class="form-select">
+              <option value="">All</option>
+              <option value="0-50">$0–$50</option>
+              <option value="50-100">$50–$100</option>
+              <option value="100-500">$100–$500</option>
+              <option value="500-1000">$500–$1000</option>
+              <option value="1000+">$1000+</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label mt-2">Date</label>
+            <input type="date" id="history-filter-date" class="form-control" />
+          </div>
+          <div class="col-12 d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary">Apply</button>
+            <button type="button" id="clear-filter-btn" class="btn btn-outline-secondary">Clear</button>
           </div>
         </div>
+    </form>
 
-        <!-- PERFORMANCE TAB -->
-        <div id="performance" class="section-panel">
+    <div class="table-responsive">
+      <table class="table table-vcenter table-striped">
 
-          <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--spacing-md); margin-bottom: var(--spacing-lg);">
-            <div>
-              <label style="font-size: var(--type-scale-sm); font-weight: 600; color: var(--color-text-secondary); margin-bottom: var(--spacing-sm); display: block;">Start Date</label>
-              <input type="date" id="perf-start-date" style="width: 100%; padding: var(--spacing-sm); border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--type-scale-sm);">
-            </div>
-            <div>
-              <label style="font-size: var(--type-scale-sm); font-weight: 600; color: var(--color-text-secondary); margin-bottom: var(--spacing-sm); display: block;">End Date</label>
-              <input type="date" id="perf-end-date" style="width: 100%; padding: var(--spacing-sm); border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--type-scale-sm);">
-            </div>
-            <div style="display: flex; align-items: flex-end; gap: var(--spacing-sm);">
-              <button id="perf-load-btn" class="btn btn-primary" style="width: 100%;">Load Performance</button>
-            </div>
-          </div>
+        <thead>
+          <tr>
+            <th class="sortable" data-sort="action">Action <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="ticker">Ticker <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="quantity">Quantity <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="price">Price/Share <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="totalValue">Total Value <span class="sort-indicator"></span></th>
+            <th class="sortable" data-sort="transaction_date">Date <span class="sort-indicator"></span></th>
+          </tr>
+        </thead>
 
-          <div style="background-color: var(--color-bg-secondary); border: 1px solid var(--color-border); border-radius: 8px; padding: var(--spacing-lg); margin-bottom: var(--spacing-xl);">
-            <div style="position: relative; height: 400px; width: 100%;">
-              <canvas id="performance-chart"></canvas>
-            </div>
-          </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-lg);">
-            <div class="card">
-              <h4 style="margin-top: 0; margin-bottom: var(--spacing-lg); font-size: var(--type-scale-lg); font-weight: 600;">Portfolio Allocation</h4>
-              <canvas id="portfolio-pie-chart"></canvas>
-            </div>
+        <tbody id="history-body"></tbody>
 
-            <div class="card">
-              <h4 style="margin-top: 0; margin-bottom: var(--spacing-lg); font-size: var(--type-scale-lg); font-weight: 600;">Total P&L by Holding</h4>
-              <canvas id="pnl-bar-chart"></canvas>
-            </div>
-          </div>
-        </div>
+      </table>
+      <div class="d-flex justify-content-between align-items-center mt-3">
+  <button id="history-prev-btn" class="btn btn-outline-primary">
+    Previous
+  </button>
 
-        <!-- TRANSACTIONS TAB -->
-        <div id="transactions" class="section-panel">
+  <span id="history-page-number">
+    Page 1
+  </span>
 
-          <form id="history-filter-form" class="row g-3 mb-3" onsubmit="return handleFilterSubmit(event);">
-            <div style="cursor: pointer; display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border: 1px solid var(--color-border); border-radius: 4px; background-color: var(--color-bg-secondary); user-select: none; margin-bottom: var(--spacing-lg);" onclick="var p = document.getElementById('filter-options-panel'); if(p.style.display === 'none') p.style.display = 'flex'; else p.style.display = 'none';">
-              <img src="/static/images/filter-icon.png" alt="Filter" style="width: 18px; height: 18px;">
-              <div style="color: var(--color-text-secondary);">Filter</div>
-            </div>
-
-            <div id="filter-options-panel" class="row g-3 mt-3" style="display: none;">
-              <div class="col-md-2">
-                <label class="form-label">Action</label>
-                <select id="history-filter-action" class="form-control">
-                  <option value="">All</option>
-                  <option value="buy">Buy</option>
-                  <option value="sell">Sell</option>
-                </select>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Ticker</label>
-                <select id="history-filter-ticker" class="form-control">
-                  <option value="">All</option>
-                </select>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Qty</label>
-                <select id="history-filter-quantity-operator" class="form-select">
-                  <option value="">Any</option>
-                  <option value=">">&gt;</option>
-                  <option value=">=">&gt;=</option>
-                  <option value="<">&lt;</option>
-                  <option value="<=">&lt;=</option>
-                  <option value="=">=</option>
-                </select>
-                <input type="number" id="history-filter-quantity" class="form-control mt-2" step="any" placeholder="Qty" />
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Price</label>
-                <select id="history-filter-price-operator" class="form-select">
-                  <option value="">Any</option>
-                  <option value=">">&gt;</option>
-                  <option value=">=">&gt;=</option>
-                  <option value="<">&lt;</option>
-                  <option value="<=">&lt;=</option>
-                  <option value="=">=</option>
-                </select>
-                <input type="text" id="history-filter-price" class="form-control mt-2" placeholder="300" />
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Range</label>
-                <select id="history-filter-price-range" class="form-select">
-                  <option value="">All</option>
-                  <option value="0-50">$0–$50</option>
-                  <option value="50-100">$50–$100</option>
-                  <option value="100-500">$100–$500</option>
-                  <option value="500-1000">$500–$1000</option>
-                  <option value="1000+">$1000+</option>
-                </select>
-              </div>
-              <div class="col-md-2">
-                <label class="form-label">Date</label>
-                <input type="date" id="history-filter-date" class="form-control" />
-              </div>
-              <div class="col-12 d-flex gap-2 mt-3">
-                <button type="submit" class="btn btn-primary">Apply</button>
-                <button type="button" id="clear-filter-btn" class="btn btn-outline-secondary" onclick="clearAllFilters()">Clear</button>
-              </div>
-            </div>
-          </form>
-
-          <div class="table-responsive">
-            <table class="table table-vcenter table-striped">
-              <thead>
-                <tr>
-                  <th class="sortable" data-sort="action">Action <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="ticker">Ticker <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="quantity">Quantity <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="price">Price/Share <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="totalValue">Total Value <span class="sort-indicator"></span></th>
-                  <th class="sortable" data-sort="transaction_date">Date <span class="sort-indicator"></span></th>
-                </tr>
-              </thead>
-              <tbody id="history-body">
-                <tr><td colspan="6" style="text-align: center; padding: 2rem;">Loading...</td></tr>
-              </tbody>
-            </table>
-            <div class="d-flex justify-content-between align-items-center mt-3">
-              <button id="history-prev-btn" class="btn btn-outline-primary">Previous</button>
-              <span id="history-page-number">Page 1</span>
-              <button id="history-next-btn" class="btn btn-outline-primary">Next</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- BUY TAB -->
-        <div id="buy" class="section-panel">
-          <div class="card">
-            <div style="padding: var(--spacing-lg); border-bottom: 1px solid var(--color-border);">
-              <h2 style="margin: 0; font-size: var(--type-scale-lg); font-weight: 600; color: var(--color-text-primary);">Buy Stock</h2>
-              <p style="margin: var(--spacing-sm) 0 0 0; font-size: var(--type-scale-sm); color: var(--color-text-secondary);">Add shares to your portfolio</p>
-            </div>
-            <form id="holding-form" style="padding: var(--spacing-lg); display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-xl); align-items: flex-end;">
-              <div>
-                <label style="display: block; font-size: var(--type-scale-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Select Stock</label>
-                <select id="ticker" style="width: 100%; padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--type-scale-sm); background-color: var(--color-bg-secondary);" required>
-                  <option value="">Choose a ticker...</option>
-                  <option value="AAPL">AAPL - Apple</option>
-                  <option value="AMZN">AMZN - Amazon</option>
-                  <option value="C">C - Citigroup</option>
-                  <option value="FB">FB - Meta</option>
-                  <option value="GOOGL">GOOGL - Google</option>
-                  <option value="MSFT">MSFT - Microsoft</option>
-                  <option value="NVDA">NVDA - NVIDIA</option>
-                  <option value="TSLA">TSLA - Tesla</option>
-                </select>
-              </div>
-
-              <div>
-                <label style="display: block; font-size: var(--type-scale-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Quantity (shares)</label>
-                <input type="number" id="quantity" style="width: 100%; padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--type-scale-sm); background-color: var(--color-bg-secondary);" placeholder="0" step="1" min="1" required />
-              </div>
-
-              <div>
-                <label style="display: block; font-size: var(--type-scale-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Current Price</label>
-                <div style="padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--color-border); border-radius: 6px; background-color: var(--color-bg-tertiary); font-size: var(--type-scale-sm); color: var(--color-text-primary); font-weight: 500; font-variant-numeric: tabular-nums;">
-                  <strong id="purchase_price">-</strong>
-                </div>
-              </div>
-
-              <div>
-                <button id="buy-btn" class="btn btn-primary" type="submit" style="width: 100%; padding: var(--spacing-sm) var(--spacing-lg); background-color: var(--color-accent); color: white; border: none; border-radius: 6px; font-size: var(--type-scale-sm); font-weight: 600; cursor: pointer;">Buy Shares</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- SELL TAB -->
-        <div id="sell" class="section-panel">
-          <div class="card">
-            <div style="padding: var(--spacing-lg); border-bottom: 1px solid var(--color-border);">
-              <h2 style="margin: 0; font-size: var(--type-scale-lg); font-weight: 600; color: var(--color-text-primary);">Sell Stock</h2>
-              <p style="margin: var(--spacing-sm) 0 0 0; font-size: var(--type-scale-sm); color: var(--color-text-secondary);">Reduce or exit positions from your portfolio</p>
-            </div>
-            <form id="sell-form" style="padding: var(--spacing-lg); display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-xl); align-items: flex-end;">
-              <div>
-                <label style="display: block; font-size: var(--type-scale-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Select Stock</label>
-                <select id="sell-ticker" style="width: 100%; padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--type-scale-sm); background-color: var(--color-bg-secondary);" required>
-                  <option value="">Choose a stock to sell...</option>
-                </select>
-              </div>
-
-              <div>
-                <label style="display: block; font-size: var(--type-scale-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Quantity (shares)</label>
-                <input type="number" id="sell-quantity-input" style="width: 100%; padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--color-border); border-radius: 6px; font-size: var(--type-scale-sm); background-color: var(--color-bg-secondary);" placeholder="0" step="1" min="1" required />
-              </div>
-
-              <div>
-                <label style="display: block; font-size: var(--type-scale-xs); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-text-secondary); margin-bottom: var(--spacing-md);">Available & Price</label>
-                <div style="padding: var(--spacing-sm) var(--spacing-md); border: 1px solid var(--color-border); border-radius: 6px; background-color: var(--color-bg-tertiary); font-size: var(--type-scale-sm); color: var(--color-text-primary);">
-                  <div style="margin-bottom: var(--spacing-xs); font-variant-numeric: tabular-nums;">Available: <strong id="sell-quantity">-</strong></div>
-                  <div style="font-variant-numeric: tabular-nums;">Price: <strong id="sell-price">-</strong></div>
-                </div>
-              </div>
-
-              <div>
-                <button id="sell-btn" class="btn btn-primary" type="submit" style="width: 100%; padding: var(--spacing-sm) var(--spacing-lg); background-color: var(--color-text-primary); color: white; border: none; border-radius: 6px; font-size: var(--type-scale-sm); font-weight: 600; cursor: pointer;">Sell Shares</button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <!-- WATCHLIST TAB -->
-        <div id="watchlist" class="section-panel">
-          <div class="section-title">Your Watchlist</div>
-          <p>Watchlist content here</p>
-        </div>
-
-        <!-- PROFILE TAB -->
-        <div id="profile" class="section-panel">
-          <div class="section-title">Account Profile</div>
-          <p>Profile content here</p>
-        </div>
-
-        <!-- SETTINGS TAB -->
-        <div id="settings" class="section-panel">
-          <div class="section-title">Settings & Preferences</div>
-          <p>Settings content here</p>
-        </div>
-      </div>
+  <button id="history-next-btn" class="btn btn-outline-primary">
+    Next
+  </button>
+</div>
     </div>
+
   </div>
 
-  <!-- Profile Modal -->
-  <div id="profile-modal" class="profile-modal">
+  <div id="settings-modal" class="profile-modal">
+
     <div class="profile-modal-content">
-      <span class="close-profile">&times;</span>
-      <h2>My Profile</h2>
-      <p><strong>Name:</strong> John Doe</p>
-      <p><strong>Email:</strong> johndoe@gmail.com</p>
-      <p><strong>Role:</strong> Investor</p>
-      <button class="btn btn-secondary" style="margin-top: 1.5rem; width: 100%;">Edit Profile</button>
+
+        <span class="close-profile" onclick="closeModal('settings-modal')">&times;</span>
+
+        <h2>Settings</h2>
+
+        <p><strong>Theme:</strong> Light Mode</p>
+        <p><strong>Currency:</strong> USD</p>
+        <p><strong>Notifications:</strong> Enabled</p>
+
+        <button class="btn btn-primary">
+            Save Settings
+        </button>
+
     </div>
+
   </div>
 
-  <!-- Support Modal -->
   <div id="support-modal" class="profile-modal">
+
     <div class="profile-modal-content">
-      <span class="close-support">&times;</span>
-      <h2>Support</h2>
-      <p><strong>Need help?</strong></p>
-      <p>Contact our support team for assistance with your portfolio.</p>
-      <p><strong>Email:</strong> support@portfoliomanager.com</p>
-      <p><strong>Phone:</strong> 1-800-PORTFOLIO</p>
-      <p style="margin-top: 1.5rem; font-size: var(--type-scale-xs); color: var(--color-text-secondary);">Available Mon-Fri, 9am-5pm EST</p>
+
+        <span class="close-profile" onclick="closeModal('support-modal')">&times;</span>
+
+        <h2>Support</h2>
+
+        <p><strong>Need Help?</strong> Contact our support team</p>
+        <p>Email: support@portfoliomanager.com</p>
+        <p>Phone: 1-800-PORTFOLIO</p>
+
+        <button class="btn btn-primary">
+            Submit Ticket
+        </button>
+
     </div>
+
   </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script>
-    const sectionTitles = {
-      dashboard: 'Dashboard',
-      holdings: 'Holdings',
-      performance: 'Performance',
-      transactions: 'Transactions',
-      buy: 'Buy Stock',
-      sell: 'Sell Stock',
-      watchlist: 'Watchlist',
-      profile: 'Profile',
-      settings: 'Settings'
-    };
-
-    function switchTab(tabName) {
-      event.preventDefault();
-
-      // Hide all tabs
-      const tabs = document.querySelectorAll('.section-panel');
-      tabs.forEach(tab => tab.classList.remove('active'));
-
-      // Remove active class from all nav items
-      const navItems = document.querySelectorAll('.nav-item');
-      navItems.forEach(item => item.classList.remove('active'));
-
-      // Show selected tab
-      const selectedTab = document.getElementById(tabName);
-      if (selectedTab) {
-        selectedTab.classList.add('active');
-      }
-
-      // Add active class to clicked nav item
-      const clickedItem = document.querySelector(`.nav-item[onclick*="${tabName}"]`);
-      if (clickedItem) {
-        clickedItem.classList.add('active');
-      }
-
-      // Update header title
-      const titleElement = document.getElementById('section-title');
-      if (titleElement && sectionTitles[tabName]) {
-        titleElement.textContent = sectionTitles[tabName];
-      }
-    }
-
-    // Modal close handlers
-    document.querySelector('.close-profile')?.addEventListener('click', () => {
-      document.getElementById('profile-modal').style.display = 'none';
-    });
-
-    document.querySelector('.close-support')?.addEventListener('click', () => {
-      document.getElementById('support-modal').style.display = 'none';
-    });
-
-    // Close modal when clicking outside
-    window.addEventListener('click', (event) => {
-      const profileModal = document.getElementById('profile-modal');
-      const supportModal = document.getElementById('support-modal');
-      if (event.target === profileModal) {
-        profileModal.style.display = 'none';
-      }
-      if (event.target === supportModal) {
-        supportModal.style.display = 'none';
-      }
-    });
-
-    // Refresh options toggle
-    function toggleRefreshOptions() {
-      const panel = document.getElementById('refresh-options-panel');
-      if (panel) {
-        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-      }
-    }
-
-    // Buy Stocks button handler
-    function showBuyAlert() {
-      alert('Buy Stocks\n\nClick to navigate to the Buy Stock form in the sidebar.');
-    }
-
-    // Sell Stocks button handler
-    function showSellAlert() {
-      alert('Sell Stocks\n\nClick to navigate to the Sell Stock form in the sidebar.');
-    }
-
-    // Load portfolio data when page loads
-    document.addEventListener('DOMContentLoaded', () => {
-      loadPortfolio();
-    });
-  </script>
+</section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/js/tabler.min.js"></script>
   <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  </div>
 </body>
 </html>

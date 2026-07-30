@@ -1,234 +1,15 @@
 body {
   font-family: Inter, Arial, sans-serif;
-  background-color: #f1f5f9;
+  background-color: f1f5f9;
   color: #1f2937;
   margin: 0;
   padding: 0;
 }
 
-.page-header {
-  background: white;
-  border-bottom: 1px solid #e2e8f0;
-  padding: 1.5rem 2rem;
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 999;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.header-left {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-.header-title {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #0f172a;
-  margin: 0;
-}
-
-.header-subtitle {
-  font-size: 0.9rem;
-  color: #64748b;
-  margin: 0;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
-.page-header .profile-section {
-  display: flex;
-  align-items: center;
-}
-
-.page-header .profile-top {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.page-header .profile-details {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.page-header .profile-name {
-  font-weight: 600;
-  line-height: 1.2;
-  color: #0f172a;
-  font-size: 0.9rem;
-}
-
-.page-header .profile-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: #0f172a;
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 0.85rem;
-}
-
-.page-header .nav-link-text {
-  color: #64748b;
-  font-size: 0.8rem;
-  margin-top: 0.15rem;
-}
-
-.page-header .nav-link-text:hover {
-  color: #0f172a;
-}
-
-.layout-container {
-  display: flex;
-  min-height: 100vh;
-  margin-top: 0;
-}
-
-.sidebar {
-  width: 260px;
-  background: white;
-  border-right: 1px solid #e2e8f0;
-  padding: 0;
-  overflow-y: auto;
-  position: fixed;
-  left: 0;
-  top: 80px;
-  height: calc(100vh - 80px);
-  display: flex;
-  flex-direction: column;
-}
-
-.sidebar-header {
-  padding: 1.5rem;
-  border-bottom: 1px solid #e2e8f0;
-  background: linear-gradient(90deg,#0f172a,#1e293b);
-}
-
-.sidebar-header .company-logo {
-  color: white;
-  font-size: 1.1rem;
-  font-weight: 800;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  letter-spacing: -0.5px;
-  margin: 0;
-}
-
-.sidebar-header .company-logo i {
-  font-size: 1.6rem;
-}
-
-.sidebar-header .company-subtitle {
-  color: #94a3b8;
-  font-size: 0.75rem;
-  letter-spacing: 0.8px;
-  font-weight: 500;
-  text-transform: uppercase;
-  margin-top: 0.5rem;
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  padding: 2rem 1.5rem;
-  flex: 1;
-}
-
-.nav-section-title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #6b7280;
-  margin: 0 0 0.75rem 0;
-}
-
-.nav-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 8px;
-  text-decoration: none;
-  color: #64748b;
-  transition: all 0.2s ease;
-  font-size: 0.95rem;
-}
-
-.nav-link:hover {
-  background: #f1f5f9;
-  color: #1f2937;
-}
-
-.nav-link.active {
-  background: #0f172a;
-  color: white;
-  font-weight: 600;
-}
-
-.nav-link i {
-  font-size: 1.1rem;
-}
-
-.main-content {
-  margin-left: 260px;
-  flex: 1;
-  padding: 2rem;
-  width: calc(100% - 260px);
-}
-
 main {
-  width: 100%;
-}
-
-.section-panel {
-  display: none;
-  animation: fadeIn 0.3s ease-in-out;
-}
-
-.section-panel.active {
-  display: block;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(5px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-main {
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 100%;
+  margin: 0 2rem 0 2rem;
+  padding-top: 2rem;
 }
 
 header {
@@ -270,9 +51,15 @@ h2 {
 
 /* Summary cards */
 #portfolio-summary {
-  margin-bottom: 2rem;
+  margin: 0 !important;
+  margin-bottom: 2rem !important;
+  gap: 1rem;
 }
 
+#portfolio-stats {
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
 
 /* Buttons */
 button {
@@ -350,22 +137,8 @@ input {
 }
 
 .dashboard-header {
-  margin-bottom: 2rem;
-}
-
-.nav-link-text {
-  display: block;
-  text-decoration: none;
-  color: #0f172a;
-  font-size: 0.85rem;
-  margin-top: 0.25rem;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-link-text:hover {
-  color: #64748b;
-  text-decoration: underline;
+  margin: 0 2rem 0 2rem;
+  padding-top: 2rem;
 }
 
 /* Portfolio header banner */
@@ -376,11 +149,11 @@ input {
   border-radius: 18px;
   border: 1px solid #e2e8f0;
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  
+
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 
 .header-banner h1 {
@@ -542,48 +315,35 @@ main section {
 
 .top-banner{
     background: linear-gradient(90deg,#0f172a,#1e293b);
-    padding: 18px 32px;
-    margin: 0;
-    width: 100vw;
-    height: 70px;
-    display: flex;
-    align-items: center;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
+    padding:18px 32px;
+    margin: 0 0 2rem 0;
 }
 
 .top-banner-content{
+    max-width:1200px;
+    margin:auto;
     display:flex;
+    justify-content:space-between;
     align-items:center;
-    gap: 3rem;
-    padding: 0 2rem;
-    margin-left: calc(50vw + 130px);
-    transform: translateX(-50%);
 }
 
 .company-logo{
     color:white;
-    font-size:1.3rem;
-    font-weight:800;
+    font-size:1.5rem;
+    font-weight:700;
     display:flex;
     align-items:center;
-    gap: 12px;
-    letter-spacing: -0.5px;
+    gap:10px;
 }
 
 .company-logo i{
-    font-size: 2rem;
-    opacity: 0.95;
+    font-size:1.8rem;
 }
 
 .company-subtitle{
-    color:#94a3b8;
-    font-size: 0.9rem;
-    letter-spacing: 0.8px;
-    font-weight: 500;
-    text-transform: uppercase;
+    color:#cbd5e1;
+    font-size:.95rem;
+    letter-spacing:.5px;
 }
 
 
@@ -685,8 +445,7 @@ th.sortable.desc .sort-indicator::after {
     position: relative;
 }
 
-.close-profile,
-.close-support {
+.close-profile {
     position: absolute;
 
     top: 15px;
