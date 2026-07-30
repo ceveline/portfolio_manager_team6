@@ -18,8 +18,8 @@ let refreshTimer = null;
 let refreshPanel = null;
 let refreshing = false;
 
-function switchTab(tabName) {
-  event.preventDefault();
+function switchTab(tabName, e) {
+  if (e) e.preventDefault();
 
   // Update active nav item
   const navItems = document.querySelectorAll('.nav-item');
@@ -28,6 +28,22 @@ function switchTab(tabName) {
   const clickedItem = document.querySelector(`.nav-item[onclick*="${tabName}"]`);
   if (clickedItem) {
     clickedItem.classList.add('active');
+  }
+
+  // Show/hide sections
+  const sections = document.querySelectorAll('main section');
+  sections.forEach(section => {
+    section.classList.add('d-none');
+  });
+
+  let targetId = tabName;
+  if (tabName === 'dashboard') {
+    targetId = 'holdings';
+  }
+
+  const targetSection = document.getElementById(targetId);
+  if (targetSection) {
+    targetSection.classList.remove('d-none');
   }
 }
 
@@ -158,23 +174,58 @@ async function loadPortfolioWithSummary() {
     if (!res.ok) throw new Error("Failed to load summary");
     const summary = await res.json();
 
-    document.querySelector("#portfolio-cost-basis").textContent = `$${summary.total_cost_basis.toFixed(2)}`;
-    document.querySelector("#portfolio-market-value").textContent = `$${summary.total_market_value.toFixed(2)}`;
-    document.querySelector("#portfolio-unrealized-pnl").textContent = `$${summary.total_unrealized_pnl.toFixed(2)}`;
-    document.querySelector("#portfolio-total-return").textContent = `${summary.total_return_pct.toFixed(2)}%`;
+    const costBasisEl = document.querySelector("#portfolio-cost-basis");
+    if (costBasisEl) costBasisEl.textContent = `$${summary.total_cost_basis.toFixed(2)}`;
 
-    document.querySelector("#total-value strong").textContent = `$${summary.total_market_value.toFixed(2)}`;
-    document.querySelector("#total-holdings strong").textContent = summary.positions.length;
+    const marketValueEl = document.querySelector("#portfolio-market-value");
+    if (marketValueEl) marketValueEl.textContent = `$${summary.total_market_value.toFixed(2)}`;
+
+    const unrealizedEl = document.querySelector("#portfolio-unrealized-pnl");
+    if (unrealizedEl) unrealizedEl.textContent = `$${summary.total_unrealized_pnl.toFixed(2)}`;
+
+    const totalReturnEl = document.querySelector("#portfolio-total-return");
+    if (totalReturnEl) totalReturnEl.textContent = `${summary.total_return_pct.toFixed(2)}%`;
+
+    const totalValueEl = document.querySelector("#total-value strong");
+    if (totalValueEl) totalValueEl.textContent = `$${summary.total_market_value.toFixed(2)}`;
+
+    const totalHoldingsEl = document.querySelector("#total-holdings strong");
+    if (totalHoldingsEl) totalHoldingsEl.textContent = summary.positions.length;
 
     let totalShares = 0;
     summary.positions.forEach(pos => {
       totalShares += pos.shares_held;
     });
-    document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
+    const totalSharesEl = document.querySelector("#total-shares strong");
+    if (totalSharesEl) totalSharesEl.textContent = totalShares.toFixed(0);
 
     const sign = summary.total_unrealized_pnl >= 0 ? "+" : "";
-    document.querySelector("#total-gain-loss strong").textContent =
+    const totalGainLossEl = document.querySelector("#total-gain-loss strong");
+    if (totalGainLossEl) totalGainLossEl.textContent =
       `${sign}$${summary.total_unrealized_pnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
+
+    // Update portfolio metrics cards with API data
+    try {
+      const metricsCostBasisEl = document.querySelector("#metrics-cost-basis");
+      const metricsMarketValueEl = document.querySelector("#metrics-market-value");
+      const metricsMarketGainEl = document.querySelector("#metrics-market-gain");
+      const metricsUnrealizedPnlEl = document.querySelector("#metrics-unrealized-pnl");
+      const metricsUnrealizedPctEl = document.querySelector("#metrics-unrealized-pct");
+      const metricsRealizedPnlEl = document.querySelector("#metrics-realized-pnl");
+      const metricsTotalReturnEl = document.querySelector("#metrics-total-return");
+      const metricsTotalReturnAmountEl = document.querySelector("#metrics-total-return-amount");
+
+      if (metricsCostBasisEl) metricsCostBasisEl.textContent = `$${summary.total_cost_basis.toFixed(2)}`;
+      if (metricsMarketValueEl) metricsMarketValueEl.textContent = `$${summary.total_market_value.toFixed(2)}`;
+      if (metricsMarketGainEl) metricsMarketGainEl.textContent = `↑ $${summary.total_unrealized_pnl.toFixed(2)}\n(${summary.positions.length} holdings)`;
+      if (metricsUnrealizedPnlEl) metricsUnrealizedPnlEl.textContent = `$${summary.total_unrealized_pnl.toFixed(2)}`;
+      if (metricsUnrealizedPctEl) metricsUnrealizedPctEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
+      if (metricsRealizedPnlEl) metricsRealizedPnlEl.textContent = `$${summary.total_realized_pnl.toFixed(2)}`;
+      if (metricsTotalReturnEl) metricsTotalReturnEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
+      if (metricsTotalReturnAmountEl) metricsTotalReturnAmountEl.textContent = `↑ $${(summary.total_unrealized_pnl + summary.total_realized_pnl).toFixed(2)}`;
+    } catch (e) {
+      console.error("Error updating metrics:", e);
+    }
 
     if (!summary.positions || summary.positions.length === 0) {
       const tbody = document.getElementById("consolidated-body");
@@ -960,28 +1011,66 @@ document.addEventListener('DOMContentLoaded', function () {
 
 });
 
+function openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = "block";
+    }
+}
+
+function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = "none";
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
 
-    const profileBtn = document.getElementById("profile-btn");
-    const modal = document.getElementById("profile-modal");
-    const closeBtn = document.querySelector(".close-profile");
+    const settingsBtn = document.getElementById("settings-btn");
+    const supportBtn = document.getElementById("support-btn");
+    const settingsModal = document.getElementById("settings-modal");
+    const supportModal = document.getElementById("support-modal");
 
-    if (!profileBtn || !modal || !closeBtn) return;
+    if (settingsBtn && settingsModal) {
+        settingsBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            openModal("settings-modal");
+        });
+    }
 
-    profileBtn.addEventListener("click", (e) => {
-        e.preventDefault();
-        modal.style.display = "block";
-    });
+    if (supportBtn && supportModal) {
+        supportBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            openModal("support-modal");
+        });
+    }
 
-    closeBtn.addEventListener("click", () => {
-        modal.style.display = "none";
+    const closeButtons = document.querySelectorAll(".close-profile");
+    closeButtons.forEach(btn => {
+        btn.addEventListener("click", (e) => {
+            const modal = e.target.closest(".profile-modal");
+            if (modal) {
+                modal.style.display = "none";
+            }
+        });
     });
 
     window.addEventListener("click", (e) => {
-        if (e.target === modal) {
-            modal.style.display = "none";
+        if (e.target.classList.contains("profile-modal")) {
+            e.target.style.display = "none";
         }
     });
+
+    // Initialize sections - hide all except holdings
+    const sections = document.querySelectorAll('main section');
+    sections.forEach(section => {
+        section.classList.add('d-none');
+    });
+    const holdingsSection = document.getElementById('holdings');
+    if (holdingsSection) {
+        holdingsSection.classList.remove('d-none');
+    }
 
 });
 

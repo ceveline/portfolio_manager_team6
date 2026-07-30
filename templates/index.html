@@ -21,7 +21,7 @@
     }
 
     .sidebar {
-      width: 280px;
+      width: 240px;
       background: linear-gradient(90deg, #0f172a, #1e293b);
       border-right: 1px solid var(--color-border);
       padding: 2rem;
@@ -92,6 +92,35 @@
       margin: 0;
       padding: 0;
     }
+
+    #portfolio-metrics {
+      display: flex;
+      gap: 1rem;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+
+    #portfolio-metrics .col-md-2 {
+      flex: 1 1 calc(16.66% - 1rem);
+      min-width: 0;
+    }
+
+    #portfolio-metrics .card-body {
+      text-align: left;
+    }
+
+    @media (max-width: 1200px) {
+      #portfolio-metrics .col-md-2 {
+        flex: 1 1 calc(16.66% - 1rem);
+      }
+    }
+
+    @media (max-width: 600px) {
+      #portfolio-metrics .col-md-2 {
+        flex: 1 1 100%;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -103,19 +132,19 @@
 
     <nav class="nav-section">
       <div class="nav-section-title">Main</div>
-      <a href="#" onclick="switchTab('dashboard')" class="nav-item active">
+      <a href="#" onclick="switchTab('dashboard', event)" class="nav-item active">
         <i class="ti ti-layout-dashboard"></i>
         <span>Dashboard</span>
       </a>
-      <a href="#" onclick="switchTab('holdings')" class="nav-item">
+      <a href="#" onclick="switchTab('holdings', event)" class="nav-item">
         <i class="ti ti-briefcase"></i>
         <span>Holdings</span>
       </a>
-      <a href="#" onclick="switchTab('performance')" class="nav-item">
+      <a href="#" onclick="switchTab('performance', event)" class="nav-item">
         <i class="ti ti-chart-line"></i>
         <span>Performance</span>
       </a>
-      <a href="#" onclick="switchTab('transactions')" class="nav-item">
+      <a href="#" onclick="switchTab('transactions', event)" class="nav-item">
         <i class="ti ti-history"></i>
         <span>Transactions</span>
       </a>
@@ -123,11 +152,11 @@
 
     <nav class="nav-section">
       <div class="nav-section-title">Actions</div>
-      <a href="#" onclick="switchTab('buy')" class="nav-item">
+      <a href="#" onclick="switchTab('buy', event)" class="nav-item">
         <i class="ti ti-plus"></i>
         <span>Buy Stock</span>
       </a>
-      <a href="#" onclick="switchTab('sell')" class="nav-item">
+      <a href="#" onclick="switchTab('sell', event)" class="nav-item">
         <i class="ti ti-minus"></i>
         <span>Sell Stock</span>
       </a>
@@ -135,7 +164,7 @@
 
     <nav class="nav-section">
       <div class="nav-section-title">Discover</div>
-      <a href="#" onclick="switchTab('watchlist')" class="nav-item">
+      <a href="#" onclick="switchTab('watchlist', event)" class="nav-item">
         <i class="ti ti-star"></i>
         <span>Watchlist</span>
       </a>
@@ -178,7 +207,10 @@
     <div class="profile-details">
         <div class="profile-name">John Doe</div>
 
-        <a href="#" id="profile-btn">My Profile</a>
+        <div style="display: flex; flex-direction: column; gap: 0.05rem; font-size: 0.875rem; line-height: 1;">
+          <a href="#" id="settings-btn" onclick="openModal('settings-modal'); return false;">Settings</a>
+          <a href="#" id="support-btn" onclick="openModal('support-modal'); return false;">Support</a>
+        </div>
     </div>
 
   </div>
@@ -189,85 +221,79 @@
 
   </div>
 
-    
-    <div id="portfolio-summary" class="row row-cards mb-4">
-      <div class="col-md-3">
+    <div id="portfolio-metrics" class="row row-cards mb-2">
+      <div class="col-md-2">
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
-
-
             <div class="metric-label">
-  <i class="ti ti-wallet"></i>
-  <div class="text-muted">Total Value</div>
-</div>
-
-<div id="total-value" class="h2 mb-0">
-  <strong>$0.00</strong>
-</div>
-
-
+              <div class="text-muted small">COST BASIS</div>
+            </div>
+            <div class="h3 mb-2" id="metrics-cost-basis">$45K</div>
+            <div class="text-muted small">Total invested</div>
           </div>
         </div>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md-2">
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
-            
-            
             <div class="metric-label">
-  <i class="ti ti-stack"></i>
-  <div class="text-muted">Total Shares</div>
-</div>
-
-<div id="total-shares" class="h2 mb-0">
-  <strong>0</strong>
-</div>
-
-
+              <div class="text-muted small">MARKET VALUE</div>
+            </div>
+            <div class="h3 mb-2" id="metrics-market-value">$52.3K</div>
+            <div class="text-success small" id="metrics-market-gain">↑ $7.3K<br>(6 holdings)</div>
           </div>
         </div>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md-2">
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
-            
             <div class="metric-label">
-  <i class="ti ti-building-bank"></i>
-  <div class="text-muted">Number of Holdings</div>
-</div>
-
-<div id="total-holdings" class="h2 mb-0">
-  <strong>0</strong>
-</div>
-          
-
-
+              <div class="text-muted small">UNREALIZED P&L</div>
+            </div>
+            <div class="h3 mb-2" id="metrics-unrealized-pnl">$6.2K</div>
+            <div class="text-success small" id="metrics-unrealized-pct">+13.9%</div>
           </div>
         </div>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md-2">
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
-            
             <div class="metric-label">
-  <i class="ti ti-chart-line"></i>
-  <div class="text-muted">Gain/Loss</div>
-</div>
+              <div class="text-muted small">REALIZED P&L</div>
+            </div>
+            <div class="h3 mb-2" id="metrics-realized-pnl">$1.1K</div>
+            <div class="text-muted small">From closed trades</div>
+          </div>
+        </div>
+      </div>
 
-<div id="total-gain-loss" class="h2 mb-0">
-  <strong>$0.00 (0.00%)</strong>
-</div>
-          
+      <div class="col-md-2">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="metric-label">
+              <div class="text-muted small">TOTAL RETURN</div>
+            </div>
+            <div class="h3 mb-2 text-success" id="metrics-total-return">+16.3%</div>
+            <div class="text-muted small" id="metrics-total-return-amount">↑ $7.3K</div>
+          </div>
+        </div>
+      </div>
 
-
+      <div class="col-md-2">
+        <div class="card h-100">
+          <div class="card-body d-flex flex-column justify-content-center">
+            <div class="metric-label">
+              <div class="text-muted small">WIN RATE</div>
+            </div>
+            <div class="h3 mb-2">68%</div>
+            <div class="text-muted small">13 of 19 trades</div>
           </div>
         </div>
       </div>
     </div>
-
 
     <div id="date-time">
       <div id="date">
@@ -279,7 +305,7 @@
 
   <main>
 
-    <section id="add-holding" class="card mb-4">
+    <section id="buy" class="card mb-4 d-none">
   <div class="card-body">
     <h2 class="card-title">Buy Stock</h2>
 
@@ -333,7 +359,7 @@
 </section>
 
 
-<section id="sell-holding" class="card mb-4">
+<section id="sell" class="card mb-4 d-none">
   <div class="card-body">
     <h2 class="card-title">Sell Stock</h2>
 
@@ -383,7 +409,7 @@
   </div>
 </section>
 
-<section id="portfolio" class="card mb-4">
+<section id="holdings" class="card mb-4">
   <div class="card-body">
 
     <div class="portfolio-header">
@@ -493,7 +519,7 @@
   </div>
 </section>
 
-<section id="performance" class="card mb-4">
+<section id="performance" class="card mb-4 d-none">
   <div class="card-body">
     <h2 class="card-title mb-3">Performance Chart</h2>
 
@@ -530,7 +556,7 @@
   </div>
 </section>
 
-<section id="history" class="card mb-4">
+<section id="transactions" class="card mb-4 d-none">
   <div class="card-body">
     <h2 class="card-title mb-3">Transaction History</h2>
 
@@ -646,20 +672,40 @@
 
   </div>
 
-  <div id="profile-modal" class="profile-modal">
+  <div id="settings-modal" class="profile-modal">
 
     <div class="profile-modal-content">
 
-        <span class="close-profile">&times;</span>
+        <span class="close-profile" onclick="closeModal('settings-modal')">&times;</span>
 
-        <h2>My Profile</h2>
+        <h2>Settings</h2>
 
-        <p><strong>Name:</strong> John Doe</p>
-        <p><strong>Email:</strong> johndoe@gmail.com</p>
-        <p><strong>Role:</strong> Investor</p>
+        <p><strong>Theme:</strong> Light Mode</p>
+        <p><strong>Currency:</strong> USD</p>
+        <p><strong>Notifications:</strong> Enabled</p>
 
         <button class="btn btn-primary">
-            Edit Profile
+            Save Settings
+        </button>
+
+    </div>
+
+  </div>
+
+  <div id="support-modal" class="profile-modal">
+
+    <div class="profile-modal-content">
+
+        <span class="close-profile" onclick="closeModal('support-modal')">&times;</span>
+
+        <h2>Support</h2>
+
+        <p><strong>Need Help?</strong> Contact our support team</p>
+        <p>Email: support@portfoliomanager.com</p>
+        <p>Phone: 1-800-PORTFOLIO</p>
+
+        <button class="btn btn-primary">
+            Submit Ticket
         </button>
 
     </div>
