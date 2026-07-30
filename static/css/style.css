@@ -30,7 +30,7 @@ h2 {
 
 /* Dashboard cards */
 .card {
-  border: none;
+  border: 1px solid #e5e7eb;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
@@ -654,4 +654,15 @@ th.sortable.desc .sort-indicator::after {
 
 .ticker:active {
     opacity: 0.6;
+}
+
+/* Placeholder dashes for metric subtitles - grey until data loads */
+#metrics-market-gain,
+#metrics-unrealized-pct,
+#metrics-total-return {
+  color: #9ca3af !important;
+}
+
+#win-rate-container {
+  color: #9ca3af;
 }

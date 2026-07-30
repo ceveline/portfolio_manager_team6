@@ -19,6 +19,16 @@ let refreshPanel = null;
 let refreshing = false;
 let tickerInfoCache = {}; // Cache for ticker info to avoid repeated API calls
 
+// Format number with thousands separator
+function formatCurrency(value) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  }).format(value);
+}
+
 // Navigation tab switching
 function switchTab(tabName, e) {
   if (e) e.preventDefault();
@@ -53,6 +63,12 @@ function switchTab(tabName, e) {
   const clickedItem = document.querySelector(`.nav-item[onclick*="${tabName}"]`);
   if (clickedItem) {
     clickedItem.classList.add('active');
+  }
+
+  // Show/hide metrics container only for dashboard and performance tabs
+  const metricsContainer = document.getElementById("metrics-container-dashboard");
+  if (metricsContainer) {
+    metricsContainer.style.display = (tabName === 'dashboard' || tabName === 'performance') ? 'block' : 'none';
   }
 }
 
@@ -295,7 +311,7 @@ async function fetchAndDisplayPrice(ticker) {
     const priceValue = Number(payload.price ?? payload.price_data?.close?.[0] ?? payload.close);
 
     if (Number.isFinite(priceValue)) {
-      priceDisplay.textContent = `$${priceValue.toFixed(2)}`;
+      priceDisplay.textContent = formatCurrency(priceValue);
       return priceValue;
     }
 
@@ -338,19 +354,19 @@ async function loadPortfolioWithSummary() {
     const summary = await res.json();
 
     const costBasisEl = document.querySelector("#portfolio-cost-basis");
-    if (costBasisEl) costBasisEl.textContent = `$${summary.total_cost_basis.toFixed(2)}`;
+    if (costBasisEl) costBasisEl.textContent = formatCurrency(summary.total_cost_basis);
 
     const marketValueEl = document.querySelector("#portfolio-market-value");
-    if (marketValueEl) marketValueEl.textContent = `$${summary.total_market_value.toFixed(2)}`;
+    if (marketValueEl) marketValueEl.textContent = formatCurrency(summary.total_market_value);
 
     const unrealizedEl = document.querySelector("#portfolio-unrealized-pnl");
-    if (unrealizedEl) unrealizedEl.textContent = `$${summary.total_unrealized_pnl.toFixed(2)}`;
+    if (unrealizedEl) unrealizedEl.textContent = formatCurrency(summary.total_unrealized_pnl);
 
     const totalReturnEl = document.querySelector("#portfolio-total-return");
     if (totalReturnEl) totalReturnEl.textContent = `${summary.total_return_pct.toFixed(2)}%`;
 
     const totalValueEl = document.querySelector("#total-value strong");
-    if (totalValueEl) totalValueEl.textContent = `$${summary.total_market_value.toFixed(2)}`;
+    if (totalValueEl) totalValueEl.textContent = formatCurrency(summary.total_market_value);
 
     const totalHoldingsEl = document.querySelector("#total-holdings strong");
     if (totalHoldingsEl) totalHoldingsEl.textContent = summary.positions.length;
@@ -365,7 +381,7 @@ async function loadPortfolioWithSummary() {
     const sign = summary.total_unrealized_pnl >= 0 ? "+" : "";
     const totalGainLossEl = document.querySelector("#total-gain-loss strong");
     if (totalGainLossEl) totalGainLossEl.textContent =
-      `${sign}$${summary.total_unrealized_pnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
+      `${sign}${formatCurrency(Math.abs(summary.total_unrealized_pnl)).replace('$', '')} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
 
     // Update portfolio metrics cards with API data
     try {
@@ -378,21 +394,48 @@ async function loadPortfolioWithSummary() {
       const metricsTotalReturnEl = document.querySelector("#metrics-total-return");
       const metricsTotalReturnAmountEl = document.querySelector("#metrics-total-return-amount");
 
-      if (metricsCostBasisEl) metricsCostBasisEl.textContent = `$${summary.total_cost_basis.toFixed(2)}`;
-      if (metricsMarketValueEl) metricsMarketValueEl.textContent = `$${summary.total_market_value.toFixed(2)}`;
-      if (metricsMarketGainEl) metricsMarketGainEl.textContent = `↑ $${summary.total_unrealized_pnl.toFixed(2)}\n(${summary.positions.length} holdings)`;
-      if (metricsUnrealizedPnlEl) metricsUnrealizedPnlEl.textContent = `$${summary.total_unrealized_pnl.toFixed(2)}`;
-      if (metricsUnrealizedPctEl) metricsUnrealizedPctEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
-      if (metricsRealizedPnlEl) metricsRealizedPnlEl.textContent = `$${summary.total_realized_pnl.toFixed(2)}`;
-      if (metricsTotalReturnEl) metricsTotalReturnEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
-      if (metricsTotalReturnAmountEl) metricsTotalReturnAmountEl.textContent = `↑ $${(summary.total_unrealized_pnl + summary.total_realized_pnl).toFixed(2)}`;
+      if (metricsCostBasisEl) metricsCostBasisEl.textContent = formatCurrency(summary.total_cost_basis);
+      if (metricsMarketValueEl) metricsMarketValueEl.textContent = formatCurrency(summary.total_market_value);
+      if (metricsMarketGainEl && summary.total_unrealized_pnl !== null) {
+        const holdingLabel = summary.positions.length === 1 ? 'holding' : 'holdings';
+        metricsMarketGainEl.textContent = `${formatCurrency(summary.total_unrealized_pnl)}\n(${summary.positions.length} ${holdingLabel})`;
+        metricsMarketGainEl.style.cssText = `color: ${summary.total_unrealized_pnl >= 0 ? "#16a34a" : "#dc2626"} !important`;
+      }
+      if (metricsUnrealizedPnlEl && summary.total_unrealized_pnl !== null) {
+        metricsUnrealizedPnlEl.textContent = formatCurrency(summary.total_unrealized_pnl);
+        metricsUnrealizedPnlEl.style.cssText = `color: ${summary.total_unrealized_pnl >= 0 ? "#16a34a" : "#dc2626"} !important`;
+      }
+      if (metricsUnrealizedPctEl && summary.total_return_pct !== null) {
+        metricsUnrealizedPctEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
+        metricsUnrealizedPctEl.style.cssText = `color: ${summary.total_return_pct >= 0 ? "#16a34a" : "#dc2626"} !important`;
+      }
+      if (metricsRealizedPnlEl && summary.total_realized_pnl !== null) {
+        metricsRealizedPnlEl.textContent = formatCurrency(summary.total_realized_pnl);
+        metricsRealizedPnlEl.style.cssText = `color: ${summary.total_realized_pnl >= 0 ? "#16a34a" : "#dc2626"} !important`;
+      }
+      if (metricsTotalReturnEl && summary.total_return_pct !== null) {
+        metricsTotalReturnEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
+        metricsTotalReturnEl.style.cssText = `color: ${summary.total_return_pct >= 0 ? "#16a34a" : "#dc2626"} !important`;
+      }
+      if (metricsTotalReturnAmountEl && summary.total_unrealized_pnl !== null && summary.total_realized_pnl !== null) {
+        const totalPnl = summary.total_unrealized_pnl + summary.total_realized_pnl;
+        metricsTotalReturnAmountEl.textContent = formatCurrency(totalPnl);
+        metricsTotalReturnAmountEl.style.cssText = `color: ${totalPnl >= 0 ? "#16a34a" : "#dc2626"} !important`;
+      }
 
       // Update win rate
       const winRatePctEl = document.querySelector("#win-rate-pct");
       const winRateTradesEl = document.querySelector("#win-rate-trades");
       const totalTradesEl = document.querySelector("#total-trades");
 
-      if (winRatePctEl) winRatePctEl.textContent = summary.win_rate_pct || 0;
+      if (winRatePctEl && summary.win_rate_pct !== null && summary.win_rate_pct !== undefined) {
+        const winRate = summary.win_rate_pct;
+        winRatePctEl.textContent = winRate;
+        const winRateContainer = document.getElementById("win-rate-container");
+        if (winRateContainer) {
+          winRateContainer.style.cssText = `color: ${winRate >= 50 ? "#16a34a" : "#dc2626"} !important`;
+        }
+      }
       if (winRateTradesEl) winRateTradesEl.textContent = summary.winning_trades || 0;
       if (totalTradesEl) totalTradesEl.textContent = summary.total_trades || 0;
     } catch (e) {
@@ -423,19 +466,19 @@ function renderPortfolioTable(positions) {
 
   positions.forEach((pos) => {
     const row = document.createElement("tr");
-    const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
-    const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
-    const currentPriceStr = pos.current_price !== null ? `$${pos.current_price.toFixed(2)}` : "-";
+    const unrealizedPnlStr = pos.unrealized_pnl !== null ? formatCurrency(pos.unrealized_pnl) : "-";
+    const marketValueStr = pos.market_value !== null ? formatCurrency(pos.market_value) : "-";
+    const currentPriceStr = pos.current_price !== null ? formatCurrency(pos.current_price) : "-";
 
     row.innerHTML = `
       <td><span class="ticker" onclick="openTickerModal('${pos.ticker}')">${pos.ticker}</span></td>
       <td>${pos.shares_held}</td>
-      <td>$${pos.avg_cost.toFixed(2)}</td>
+      <td>${formatCurrency(pos.avg_cost)}</td>
       <td>${currentPriceStr}</td>
-      <td>$${pos.cost_basis.toFixed(2)}</td>
+      <td>${formatCurrency(pos.cost_basis)}</td>
       <td>${marketValueStr}</td>
       <td>${unrealizedPnlStr}</td>
-      <td>$${pos.realized_pnl.toFixed(2)}</td>
+      <td>${formatCurrency(pos.realized_pnl)}</td>
     `;
     tbody.appendChild(row);
   });
@@ -459,8 +502,8 @@ function renderTopHoldings(positions) {
 
   top5.forEach((pos) => {
     const row = document.createElement("tr");
-    const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
-    const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
+    const marketValueStr = pos.market_value !== null ? formatCurrency(pos.market_value) : "-";
+    const unrealizedPnlStr = pos.unrealized_pnl !== null ? formatCurrency(pos.unrealized_pnl) : "-";
 
     let returnPctStr = "-";
     if (pos.cost_basis && pos.cost_basis > 0) {
@@ -648,8 +691,8 @@ function renderTransactionTable(transactions) {
       <td>${t.action}</td>
       <td><span class="ticker" onclick="openTickerModal('${t.ticker}')">${t.ticker}</span></td>
       <td>${t.quantity}</td>
-      <td>$${t.price.toFixed(2)}</td>
-      <td>$${t.totalValue.toFixed(2)}</td>
+      <td>${formatCurrency(t.price)}</td>
+      <td>${formatCurrency(t.totalValue)}</td>
       <td>${t.transaction_date}</td>
     `;
     tbody.appendChild(row);
@@ -1180,10 +1223,14 @@ document.querySelectorAll("th.sortable").forEach(th => {
 
 // Handle date and load data as soon as the page is ready
 window.addEventListener("DOMContentLoaded", () => {
-  const currentDateEl = document.getElementById("current-date");
-  if (currentDateEl) {
-    currentDateEl.textContent = getTodayDate();
+  const currentDatetimeEl = document.getElementById("current-datetime");
+  if (currentDatetimeEl) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-US", { year: "numeric", month: "2-digit", day: "2-digit" });
+    const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+    currentDatetimeEl.textContent = `${dateStr} ${timeStr}`;
   }
+
   setDefaultPerformanceDates();
   const startDate = document.getElementById("perf-start-date").value;
   const endDate = document.getElementById("perf-end-date").value;

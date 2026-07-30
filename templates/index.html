@@ -195,12 +195,6 @@
           </div>
         </div>
       </div>
-    <div id="date-time">
-      <div id="date">
-        <p>Date: </p><span id="current-date"></span>
-      </div>
-      <span id="current-time"></span>
-    </div>
   </header>
 
   <main>
@@ -269,12 +263,9 @@
       </div>
     </section>
 
-<section id="dashboard" class="card mb-4">
-  <div class="card-body">
-    <h2 class="card-title mb-4">Dashboard</h2>
-
-    <!-- Metrics -->
-    <div id="portfolio-metrics" class="row row-cards mb-4">
+    <!-- Portfolio Metrics - Dashboard -->
+    <div id="metrics-container-dashboard">
+      <div id="portfolio-metrics" class="row row-cards mb-2">
       <div class="col-md-2">
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
@@ -294,7 +285,7 @@
               <div class="text-muted small">MARKET VALUE</div>
             </div>
             <div class="h3 mb-2" id="metrics-market-value">-</div>
-            <div class="text-success small" id="metrics-market-gain">-</div>
+            <div class="text-muted small" id="metrics-market-gain">-</div>
           </div>
         </div>
       </div>
@@ -306,7 +297,7 @@
               <div class="text-muted small">UNREALIZED P&L</div>
             </div>
             <div class="h3 mb-2" id="metrics-unrealized-pnl">-</div>
-            <div class="text-success small" id="metrics-unrealized-pct">-</div>
+            <div class="text-muted small" id="metrics-unrealized-pct">-</div>
           </div>
         </div>
       </div>
@@ -329,8 +320,8 @@
             <div class="metric-label">
               <div class="text-muted small">TOTAL RETURN</div>
             </div>
-            <div class="h3 mb-2 text-success" id="metrics-total-return">-</div>
-            <div class="text-muted small" id="metrics-total-return-amount">-</div>
+            <div class="h3 mb-2" id="metrics-total-return-amount">-</div>
+            <div class="text-muted small" id="metrics-total-return">-</div>
           </div>
         </div>
       </div>
@@ -341,12 +332,22 @@
             <div class="metric-label">
               <div class="text-muted small">WIN RATE</div>
             </div>
-            <div class="h3 mb-2"><span id="win-rate-pct">-</span>%</div>
+            <div class="h3 mb-2" id="win-rate-container"><span id="win-rate-pct">-</span>%</div>
             <div class="text-muted small"><span id="win-rate-trades">-</span> of <span id="total-trades">-</span> trades</div>
           </div>
         </div>
       </div>
+      </div>
+
+      <!-- Date and Time -->
+      <div id="date-time" class="mb-4">
+        <span id="current-datetime"></span>
+      </div>
     </div>
+
+<section id="dashboard" class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title mb-4">Dashboard</h2>
 
     <!-- Top 5 Holdings -->
     <h3 class="mb-3">Top 5 Holdings</h3>
