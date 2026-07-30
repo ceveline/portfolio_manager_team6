@@ -72,8 +72,10 @@ function closeModal(modalId) {
 }
 
 async function loadPortfolio(filters = {}) {
-  
-  const holdingsRes = await fetch(`${API_BASE}/holdings`);
+
+  const holdingsRes = await fetch(`${API_BASE}/holdings?t=${Date.now()}`, {
+    cache: 'no-store'
+  });
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
 
@@ -84,8 +86,11 @@ async function loadPortfolio(filters = {}) {
     }
   });
 
-  const historyUrl = `${API_BASE}/transactions${params.toString() ? `?${params.toString()}` : ""}`;
-  const historyRes = await fetch(historyUrl);
+  const paramsStr = params.toString();
+  const historyUrl = `${API_BASE}/transactions?${paramsStr ? `${paramsStr}&` : ""}t=${Date.now()}`;
+  const historyRes = await fetch(historyUrl, {
+    cache: 'no-store'
+  });
   const history = await historyRes.json();
 
   await loadPortfolioWithSummary();
@@ -581,26 +586,28 @@ function populateSellDropdown(holdings) {
   const sellSelect = document.getElementById("sell-ticker");
   sellSelect.innerHTML = '<option value="">Select a stock to sell...</option>';
 
-  // Consolidate holdings by ticker and store available quantities
+  // Consolidate holdings by ticker and store all IDs for that ticker
   const consolidatedMap = {};
   availableQuantities = {}; // Reset available quantities
+  window.holdingsByTicker = {}; // Store all holding IDs for each ticker
 
   holdings.forEach((h) => {
     if (!consolidatedMap[h.ticker]) {
       consolidatedMap[h.ticker] = {
         ticker: h.ticker,
-        totalQuantity: 0,
-        firstId: h.id
+        totalQuantity: 0
       };
+      window.holdingsByTicker[h.ticker] = [];
     }
     consolidatedMap[h.ticker].totalQuantity += Number(h.quantity || 0);
+    window.holdingsByTicker[h.ticker].push({ id: h.id, quantity: h.quantity });
   });
 
   // Store available quantities and populate dropdown
   Object.values(consolidatedMap).forEach((consolidated) => {
     availableQuantities[consolidated.ticker] = consolidated.totalQuantity;
     const option = document.createElement("option");
-    option.value = consolidated.firstId;
+    option.value = consolidated.ticker;
     option.textContent = `${consolidated.ticker} (${consolidated.totalQuantity} shares)`;
     option.dataset.ticker = consolidated.ticker;
     option.dataset.availableQuantity = consolidated.totalQuantity;
@@ -649,7 +656,7 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
 
   document.getElementById("sell-quantity-input").value = "";
 
-  const averagePrice = getPortfolioAvgPrice(holding.ticker, holdingsData);
+  const averagePrice = getPortfolioAvgPrice(ticker, holdingsData);
   document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
 });
 
@@ -696,7 +703,6 @@ if (holdingForm) {
       await loadPortfolio();
     } catch (err) {
       console.error("Buy failed:", err);
-      alert(err.message);
     }
   });
 }
@@ -704,13 +710,11 @@ if (holdingForm) {
 document.getElementById("sell-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const holdingId = document.getElementById("sell-ticker").value;
-  const selectedOption = document.querySelector(`#sell-ticker option[value="${holdingId}"]`);
-  const ticker = selectedOption?.dataset.ticker;
+  const ticker = document.getElementById("sell-ticker").value;
   const quantity = parseFloat(document.getElementById("sell-quantity-input").value);
   const sellDate = getTodayDate();
 
-  if (!holdingId) {
+  if (!ticker) {
     alert("Please select a stock to sell");
     return;
   }
@@ -727,15 +731,33 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
     return;
   }
 
-  const url = new URL(`${API_BASE}/holdings/${holdingId}`, window.location.origin);
-  url.searchParams.append("quantity", quantity);
-  if (sellDate) url.searchParams.append("sell_date", sellDate);
+  try {
+    // Delete from multiple holdings if needed (FIFO)
+    let remainingQuantity = quantity;
+    const holdings = window.holdingsByTicker[ticker] || [];
 
-  await fetch(url, { method: "DELETE" });
+    for (const holding of holdings) {
+      if (remainingQuantity <= 0) break;
 
-  e.target.reset();
-  resetHistoryFilter();
-  loadPortfolio();
+      const quantityToDelete = Math.min(remainingQuantity, holding.quantity);
+      const url = new URL(`${API_BASE}/holdings/${holding.id}`, window.location.origin);
+      url.searchParams.append("quantity", quantityToDelete);
+      if (sellDate) url.searchParams.append("sell_date", sellDate);
+
+      const response = await fetch(url, { method: "DELETE" });
+      if (!response.ok) {
+        throw new Error(`Failed to sell ${quantityToDelete} shares`);
+      }
+
+      remainingQuantity -= quantityToDelete;
+    }
+
+    e.target.reset();
+    resetHistoryFilter();
+    await loadPortfolio();
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -1134,7 +1156,36 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshing = true;
 
     try {
-      await loadPortfolio();
+      // Store current pagination and sorting state
+      const currentPage = historyCurrentPage;
+      const currentSort = currentSortColumn;
+      const currentSortDir = currentSortDirection;
+
+      // Load fresh data with cache-busting
+      const holdingsRes = await fetch(`${API_BASE}/holdings?t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      const holdings = await holdingsRes.json();
+      holdingsData = holdings;
+
+      const historyRes = await fetch(`${API_BASE}/transactions?t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      const history = await historyRes.json();
+
+      // Refresh metrics but keep history state
+      await loadPortfolioWithSummary();
+      populateSellDropdown(holdings);
+      clearSellDetails();
+
+      // Restore pagination and sorting (don't reload history)
+      historyCurrentPage = currentPage;
+      currentSortColumn = currentSort;
+      currentSortDirection = currentSortDir;
+      historyData = history;
+
+      // Re-render with preserved state
+      sortTransactionTable(currentSort);
     } finally {
       refreshing = false;
     }
