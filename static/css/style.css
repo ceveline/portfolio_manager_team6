@@ -573,3 +573,28 @@ th.sortable.desc .sort-indicator::after {
 
     margin-bottom: 1rem;
 }
+.success-message {
+  padding: 12px;
+  margin-bottom: 15px;
+  border-radius: 6px;
+  background-color: #dcfce7;
+  color: #166534;
+  font-weight: 600;
+}
+
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c2c7;
+  padding: 10px;
+  border-radius: 5px;
+}
+
+.error-message {
+  color: #dc3545;
+  background-color: #f8d7da;
+  border: 1px solid #f5c2c7;
+  padding: 10px;
+  border-radius: 5px;
+  font-weight: bold;
+}
