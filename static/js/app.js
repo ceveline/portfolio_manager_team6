@@ -1067,4 +1067,3 @@ window.addEventListener("click", (e) => {
         supportModal.style.display = "none";
     }
 });
-});
