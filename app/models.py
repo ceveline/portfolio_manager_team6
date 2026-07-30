@@ -2,6 +2,25 @@ from datetime import date
 
 from app import db
 
+class User(db.Model):
+    """User account information."""
+
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(50), nullable=False)
+    last_name = db.Column(db.String(50), nullable=False)
+    email = db.Column(db.String(120), nullable=False, unique=True, index=True)
+    account_balance = db.Column(db.Float, nullable=False, default=0.0)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "first_name": self.first_name,
+            "last_name": self.last_name,
+            "email": self.email,
+            "account_balance": self.account_balance,
+        }
 
 class Holding(db.Model):
     """A single stock position held in the (one and only) portfolio.

@@ -1,5 +1,6 @@
 const API_BASE = "/api";
 let holdingsData = [];
+let usersData = [];
 let portfolioPieChart = null;
 let performanceChart = null;
 let pnlBarChart = null;
@@ -45,6 +46,39 @@ function switchTab(tabName, e) {
   if (targetSection) {
     targetSection.classList.remove('d-none');
   }
+}
+
+async function loadUsers() {
+  var usernameEl = document.getElementById("profile-btn");
+  var userAvatarEl = document.getElementById("profile-avatar-id");
+  var firstNameEl = document.getElementById("first-name-value");
+  var lastNameEl = document.getElementById("last-name-value");
+  var emailEl = document.getElementById("email-value");
+
+
+  try {
+    
+    const userRes = await fetch(`${API_BASE}/users/1`);
+    const user = await userRes.json(); 
+
+    const firstName = `${user.first_name}`;
+    const lastName = `${user.last_name}`;
+    const email = `${user.email}`;
+    const fullName = firstName + " " + lastName;
+    const avatarName = firstName.charAt(0).toUpperCase() + lastName.charAt(0).toUpperCase();
+
+    usernameEl.textContent = fullName;
+    userAvatarEl.textContent = avatarName;
+
+    // for the profile modal
+    firstNameEl.value = firstName;
+    lastNameEl.value = lastName;
+    emailEl.value = email;
+
+  } catch (error) {
+    console.error("Error loading user:", error);
+  }
+
 }
 
 async function loadPortfolio(filters = {}) {
@@ -709,7 +743,7 @@ if (historyFilterForm) {
       const normalizedPrice = Number(priceValue).toString();
       filters.price = `${priceOperator}${normalizedPrice}`;
     }
-    
+
     if (totalValueRange) {
       filters.totalValue = totalValueRange;
     }  if (year) filters.year = year;
@@ -984,7 +1018,7 @@ window.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-
+  loadUsers(); //Initial load for user
   loadPortfolio(); // Initial load
   startAutoRefresh();
 });
@@ -1065,8 +1099,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const settingsBtn = document.getElementById("settings-btn");
     const supportBtn = document.getElementById("support-btn");
+    const profileBtn = document.getElementById("profile-btn");
     const settingsModal = document.getElementById("settings-modal");
     const supportModal = document.getElementById("support-modal");
+    const profileModal = document.getElementById("user-profile-modal");
 
     if (settingsBtn && settingsModal) {
         settingsBtn.addEventListener("click", (e) => {
@@ -1079,6 +1115,13 @@ document.addEventListener("DOMContentLoaded", () => {
         supportBtn.addEventListener("click", (e) => {
             e.preventDefault();
             openModal("support-modal");
+        });
+    }
+
+    if (profileBtn && profileModal) {
+        profileBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            openModal("user-profile-modal");
         });
     }
 
@@ -1132,6 +1175,8 @@ function startAutoRefresh() {
     await refreshPortfolio();
   }, refreshInterval);
 }
+
+
 
 const applyRefreshButton = document.getElementById("apply-refresh-btn");
 
