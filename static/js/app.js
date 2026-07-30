@@ -331,7 +331,9 @@ async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
 
 async function loadPortfolioWithSummary() {
   try {
-    const res = await fetch(`${API_BASE}/summary`);
+    const res = await fetch(`${API_BASE}/summary?t=${Date.now()}`, {
+      cache: 'no-store'
+    });
     if (!res.ok) throw new Error("Failed to load summary");
     const summary = await res.json();
 
@@ -1310,11 +1312,19 @@ document.addEventListener("DOMContentLoaded", () => {
       populateSellDropdown(holdings);
       clearSellDetails();
 
+      // Process history data with calculated fields (same as loadHistory does)
+      historyData = history.map((t) => ({
+        ...t,
+        price: Number(t.price || 0),
+        quantity: Number(t.quantity || 0),
+        totalValue: Number(t.quantity || 0) * Number(t.price || 0),
+        action: t.action.charAt(0).toUpperCase() + t.action.slice(1),
+      }));
+
       // Restore pagination and sorting (don't reload history)
       historyCurrentPage = currentPage;
       currentSortColumn = currentSort;
       currentSortDirection = currentSortDir;
-      historyData = history;
 
       // Re-render with preserved state
       sortTransactionTable(currentSort);
