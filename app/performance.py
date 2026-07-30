@@ -221,6 +221,56 @@ def portfolio_value_series(start_date, end_date, tickers=None):
     return series
 
 
+def calculate_win_rate():
+    """Calculate win rate: percentage of sell transactions that were profitable.
+
+    For each sell, calculate realized P&L based on average cost of buys before it.
+    Win rate = (number of profitable sells) / (total sells) * 100
+    """
+    all_transactions = Transaction.query.order_by(
+        Transaction.transaction_date.asc(), Transaction.id.asc()
+    ).all()
+
+    if not all_transactions:
+        return {"win_rate_pct": 0.0, "winning_trades": 0, "total_trades": 0}
+
+    # Track average cost per ticker
+    avg_costs = {}
+    winning_trades = 0
+    total_sells = 0
+
+    for tx in all_transactions:
+        if tx.action == "buy":
+            # Update average cost for this ticker
+            if tx.ticker not in avg_costs:
+                avg_costs[tx.ticker] = 0.0
+
+            current_shares = sum(t.quantity for t in all_transactions
+                               if t.ticker == tx.ticker
+                               and t.action == "buy"
+                               and (t.transaction_date < tx.transaction_date or
+                                    (t.transaction_date == tx.transaction_date and t.id < tx.id)))
+            new_shares = current_shares + tx.quantity
+            avg_costs[tx.ticker] = (
+                (avg_costs[tx.ticker] * current_shares + tx.price * tx.quantity) / new_shares
+                if new_shares > 0 else tx.price
+            )
+        elif tx.action == "sell":
+            total_sells += 1
+            avg_cost = avg_costs.get(tx.ticker, 0.0)
+            pnl = (tx.price - avg_cost) * tx.quantity
+            if pnl > 0:
+                winning_trades += 1
+
+    win_rate_pct = (winning_trades / total_sells * 100) if total_sells > 0 else 0.0
+
+    return {
+        "win_rate_pct": round(win_rate_pct, 1),
+        "winning_trades": winning_trades,
+        "total_trades": total_sells
+    }
+
+
 def portfolio_summary(current_prices):
     """current_prices: {ticker: live_price_or_None}. Returns per-ticker
     and total cost basis, market value, and realized/unrealized P&L.
@@ -285,6 +335,8 @@ def portfolio_summary(current_prices):
             ((total_market_value + total_realized_pnl - total_cost_basis) / total_cost_basis) * 100, 2
         )
 
+    win_rate = calculate_win_rate()
+
     return {
         "positions": positions,
         "total_market_value": round(total_market_value, 2),
@@ -292,4 +344,7 @@ def portfolio_summary(current_prices):
         "total_unrealized_pnl": round(total_market_value - total_cost_basis, 2),
         "total_realized_pnl": round(total_realized_pnl, 2),
         "total_return_pct": total_return_pct,
+        "win_rate_pct": win_rate["win_rate_pct"],
+        "winning_trades": win_rate["winning_trades"],
+        "total_trades": win_rate["total_trades"],
     }

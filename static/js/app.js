@@ -386,6 +386,15 @@ async function loadPortfolioWithSummary() {
       if (metricsRealizedPnlEl) metricsRealizedPnlEl.textContent = `$${summary.total_realized_pnl.toFixed(2)}`;
       if (metricsTotalReturnEl) metricsTotalReturnEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
       if (metricsTotalReturnAmountEl) metricsTotalReturnAmountEl.textContent = `↑ $${(summary.total_unrealized_pnl + summary.total_realized_pnl).toFixed(2)}`;
+
+      // Update win rate
+      const winRatePctEl = document.querySelector("#win-rate-pct");
+      const winRateTradesEl = document.querySelector("#win-rate-trades");
+      const totalTradesEl = document.querySelector("#total-trades");
+
+      if (winRatePctEl) winRatePctEl.textContent = summary.win_rate_pct || 0;
+      if (winRateTradesEl) winRateTradesEl.textContent = summary.winning_trades || 0;
+      if (totalTradesEl) totalTradesEl.textContent = summary.total_trades || 0;
     } catch (e) {
       console.error("Error updating metrics:", e);
     }
