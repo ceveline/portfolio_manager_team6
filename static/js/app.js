@@ -65,7 +65,7 @@ async function loadPortfolio(filters = {}) {
   const history = await historyRes.json();
 
   await loadPortfolioWithSummary();
-  loadHistory(history);
+  loadHistory(history, filters);
   populateSellDropdown(holdings);
   clearSellDetails();
 }
@@ -361,12 +361,46 @@ function renderPortfolioPieChart(positions) {
   });
 }
 
-function loadHistory(history) {
+function loadHistory(history, filters = {}) {
   if (!history.length) {
     const tbody = document.getElementById("history-body");
     tbody.innerHTML = '<tr class="empty-state"><td colspan="6">No transaction history yet.</td></tr>';
     return;
   }
+
+  // Filter by total transaction value
+if (filters.totalValue) {
+
+  history = history.filter(t => {
+
+    const totalValue =
+      Number(t.quantity || 0) *
+      Number(t.price || 0);
+
+    switch(filters.totalValue) {
+
+      case "0-50":
+        return totalValue >= 0 && totalValue <= 50;
+
+      case "50-100":
+        return totalValue > 50 && totalValue <= 100;
+
+      case "100-500":
+        return totalValue > 100 && totalValue <= 500;
+
+      case "500-1000":
+        return totalValue > 500 && totalValue <= 1000;
+
+      case "1000+":
+        return totalValue > 1000;
+
+      default:
+        return true;
+    }
+
+  });
+
+}
 
   // Store history data with calculated fields for sorting
   historyData = history.map((t) => ({
@@ -665,8 +699,7 @@ if (historyFilterForm) {
     const quantityValue = document.getElementById("history-filter-quantity")?.value?.trim();
     const priceOperator = document.getElementById("history-filter-price-operator")?.value;
     const priceValue = document.getElementById("history-filter-price")?.value?.trim();
-    const priceRange = document.getElementById("history-filter-price-range")?.value;
-    const year = document.getElementById("history-filter-year")?.value?.trim();
+    const totalValueRange = document.getElementById("history-filter-price-range")?.value;    const year = document.getElementById("history-filter-year")?.value?.trim();
     const dateValue = document.getElementById("history-filter-date")?.value?.trim();
 
     if (action) filters.action = action;
@@ -676,8 +709,11 @@ if (historyFilterForm) {
       const normalizedPrice = Number(priceValue).toString();
       filters.price = `${priceOperator}${normalizedPrice}`;
     }
-    if (priceRange) filters.price_range = priceRange;
-    if (year) filters.year = year;
+    
+    if (totalValueRange) {
+      filters.totalValue = totalValueRange;
+    }  if (year) filters.year = year;
+
     if (dateValue) filters.date = dateValue;
 
     if (Object.keys(filters).length === 0) {
