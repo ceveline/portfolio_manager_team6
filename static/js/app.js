@@ -18,32 +18,56 @@ let refreshTimer = null;
 let refreshPanel = null;
 let refreshing = false;
 
+// Navigation tab switching
 function switchTab(tabName, e) {
   if (e) e.preventDefault();
 
+  // Map tab names to section IDs
+  const sectionMap = {
+    'dashboard': 'dashboard',
+    'holdings': 'holdings',
+    'buy': 'buy',
+    'sell': 'sell',
+    'performance': 'performance',
+    'transactions': 'transactions'
+  };
+
+  const targetId = sectionMap[tabName] || 'holdings';
+
+  // Hide all sections, show target section
+  document.querySelectorAll('main > section').forEach(section => {
+    section.style.display = 'none';
+  });
+
+  const targetSection = document.getElementById(targetId);
+  if (targetSection) {
+    targetSection.style.display = 'block';
+  }
+
   // Update active nav item
-  const navItems = document.querySelectorAll('.nav-item');
-  navItems.forEach(item => item.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
 
   const clickedItem = document.querySelector(`.nav-item[onclick*="${tabName}"]`);
   if (clickedItem) {
     clickedItem.classList.add('active');
   }
+}
 
-  // Show/hide sections
-  const sections = document.querySelectorAll('main section');
-  sections.forEach(section => {
-    section.classList.add('d-none');
-  });
-
-  let targetId = tabName;
-  if (tabName === 'dashboard') {
-    targetId = 'holdings';
+// Modal functions
+function openModal(modalId, e) {
+  if (e) e.preventDefault();
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = 'block';
   }
+}
 
-  const targetSection = document.getElementById(targetId);
-  if (targetSection) {
-    targetSection.classList.remove('d-none');
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = 'none';
   }
 }
 
@@ -237,6 +261,7 @@ async function loadPortfolioWithSummary() {
     // Store portfolio data and render with default sorting by ticker
     portfolioData = summary.positions;
     sortPortfolioTable("ticker"); // Apply default sort
+    renderTopHoldings(summary.positions);
     renderPortfolioPieChart(summary.positions);
     renderPnLBarChart(summary.positions);
   } catch (err) {
@@ -263,6 +288,44 @@ function renderPortfolioTable(positions) {
       <td>${marketValueStr}</td>
       <td>${unrealizedPnlStr}</td>
       <td>$${pos.realized_pnl.toFixed(2)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function renderTopHoldings(positions) {
+  const tbody = document.getElementById("top-holdings-body");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  // Sort by market value and get top 5
+  const top5 = positions
+    .sort((a, b) => (b.market_value || 0) - (a.market_value || 0))
+    .slice(0, 5);
+
+  if (top5.length === 0) {
+    tbody.innerHTML = '<tr class="empty-state"><td colspan="5">No portfolio data yet.</td></tr>';
+    return;
+  }
+
+  top5.forEach((pos) => {
+    const row = document.createElement("tr");
+    const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
+    const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
+
+    let returnPctStr = "-";
+    if (pos.cost_basis && pos.cost_basis > 0) {
+      const returnPct = (pos.unrealized_pnl / pos.cost_basis) * 100;
+      returnPctStr = `${returnPct.toFixed(1)}%`;
+    }
+
+    row.innerHTML = `
+      <td>${pos.ticker}</td>
+      <td>${pos.shares_held}</td>
+      <td>${marketValueStr}</td>
+      <td>${unrealizedPnlStr}</td>
+      <td>${returnPctStr}</td>
     `;
     tbody.appendChild(row);
   });
@@ -1011,67 +1074,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
 });
 
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = "block";
-    }
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = "none";
-    }
-}
-
 document.addEventListener("DOMContentLoaded", () => {
-
-    const settingsBtn = document.getElementById("settings-btn");
-    const supportBtn = document.getElementById("support-btn");
-    const settingsModal = document.getElementById("settings-modal");
-    const supportModal = document.getElementById("support-modal");
-
-    if (settingsBtn && settingsModal) {
-        settingsBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            openModal("settings-modal");
-        });
-    }
-
-    if (supportBtn && supportModal) {
-        supportBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            openModal("support-modal");
-        });
-    }
-
-    const closeButtons = document.querySelectorAll(".close-profile");
-    closeButtons.forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            const modal = e.target.closest(".profile-modal");
-            if (modal) {
-                modal.style.display = "none";
-            }
-        });
+    // Initialize - hide all sections except dashboard
+    document.querySelectorAll('main > section').forEach(section => {
+        section.style.display = 'none';
     });
+    const dashboardSection = document.getElementById('dashboard');
+    if (dashboardSection) {
+        dashboardSection.style.display = 'block';
+    }
 
+    // Close modal when clicking outside
     window.addEventListener("click", (e) => {
-        if (e.target.classList.contains("profile-modal")) {
+        if (e.target.classList && e.target.classList.contains("profile-modal")) {
             e.target.style.display = "none";
         }
     });
-
-    // Initialize sections - hide all except holdings
-    const sections = document.querySelectorAll('main section');
-    sections.forEach(section => {
-        section.classList.add('d-none');
-    });
-    const holdingsSection = document.getElementById('holdings');
-    if (holdingsSection) {
-        holdingsSection.classList.remove('d-none');
-    }
-
 });
 
   async function refreshPortfolio() {
