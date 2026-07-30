@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Portfolio Manager</title>
   <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -120,7 +120,6 @@
         flex: 1 1 100%;
       }
     }
-
   </style>
 </head>
 <body>
@@ -162,66 +161,120 @@
       </a>
     </nav>
 
-    <nav class="nav-section">
-      <div class="nav-section-title">Discover</div>
-      <a href="#" onclick="switchTab('watchlist', event)" class="nav-item">
-        <i class="ti ti-star"></i>
-        <span>Watchlist</span>
-      </a>
-    </nav>
   </aside>
 
   <div class="main-wrapper">
-<div class="top-banner">
-  <div class="top-banner-content">
-
-    <div class="company-logo">
-      <i class="ti ti-building-bank"></i>
-      Portfolio Manager
-    </div>
-
-    <div class="company-subtitle">
-      Wealth Management Dashboard
-    </div>
-
-  </div>
-</div>
-
-  <header class="dashboard-header">
-
-  <div class="header-top">
-    <div class="header-banner">
-  <h1>My Portfolio</h1>
-  <p class="text-muted">
-    Monitor holdings, performance, and portfolio insights
-  </p>
-</div>
-
-  <div class="profile-section">
-
-  <div class="profile-top">
-    <div class="profile-avatar">
-      JD
-    </div>
-
-    <div class="profile-details">
-        <div class="profile-name">John Doe</div>
-
-        <div style="display: flex; flex-direction: column; gap: 0.05rem; font-size: 0.875rem; line-height: 1;">
-          <a href="#" id="settings-btn" onclick="openModal('settings-modal'); return false;">Settings</a>
-          <a href="#" id="support-btn" onclick="openModal('support-modal'); return false;">Support</a>
+    <div class="top-banner">
+      <div class="top-banner-content">
+        <div class="company-logo">
+          <i class="ti ti-building-bank"></i>
+          Portfolio Manager
         </div>
+        <div class="company-subtitle">
+          Wealth Management Dashboard
+        </div>
+      </div>
     </div>
 
-  </div>
+    <header class="dashboard-header">
+      <div class="header-top">
+        <div class="header-banner">
+          <h1>My Portfolio</h1>
+          <p class="text-muted">Monitor holdings, performance, and portfolio insights</p>
+        </div>
+        <div class="profile-section">
+          <div class="profile-top">
+            <div class="profile-avatar">JD</div>
+            <div class="profile-details">
+              <div class="profile-name">John Doe</div>
+              <div style="display: flex; flex-direction: column; gap: 0.05rem; font-size: 0.875rem; line-height: 1;">
+                <a href="#" onclick="openModal('settings-modal', event)">Settings</a>
+                <a href="#" onclick="openModal('support-modal', event)">Support</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    <div id="date-time">
+      <div id="date">
+        <p>Date: </p><span id="current-date"></span>
+      </div>
+      <span id="current-time"></span>
+    </div>
+  </header>
 
+  <main>
+    <section id="buy" class="card mb-4">
+      <div class="card-body">
+        <h2 class="card-title">Buy Stock</h2>
+        <form id="holding-form" class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Stock</label>
+            <select id="ticker" class="form-select" required>
+              <option value="">Select a ticker...</option>
+              <option value="AAPL">AAPL - Apple</option>
+              <option value="GOOGL">GOOGL - Google</option>
+              <option value="MSFT">MSFT - Microsoft</option>
+              <option value="TSLA">TSLA - Tesla</option>
+              <option value="META">META - Meta</option>
+              <option value="AMZN">AMZN - Amazon</option>
+              <option value="NVDA">NVDA - NVIDIA</option>
+              <option value="SPY">SPY - S&P 500 ETF</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" id="quantity" class="form-control" placeholder="Quantity" step="1" min="1" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Current Price</label>
+            <div id="buy-details" class="form-control bg-light">
+              <div id="buy-price-display">
+                <strong id="purchase_price">-</strong>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button id="buy-btn" class="btn btn-success w-100" type="submit">Buy</button>
+          </div>
+        </form>
+      </div>
+    </section>
 
-</div>
+    <section id="sell" class="card mb-4">
+      <div class="card-body">
+        <h2 class="card-title">Sell Stock</h2>
+        <form id="sell-form" class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Stock</label>
+            <select id="sell-ticker" class="form-select" required>
+              <option value="">Select a stock to sell...</option>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" id="sell-quantity-input" class="form-control" placeholder="Quantity to sell" step="1" min="1" required>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label">Details</label>
+            <div id="sell-details" class="form-control bg-light">
+              <div id="sell-quantity-display">Available: <strong id="sell-quantity">-</strong></div>
+              <div id="sell-price-display">Current Price: <strong id="sell-price">-</strong></div>
+            </div>
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button id="sell-btn" class="btn btn-danger w-100" type="submit">Sell</button>
+          </div>
+        </form>
+      </div>
+    </section>
 
+<section id="dashboard" class="card mb-4">
+  <div class="card-body">
+    <h2 class="card-title mb-4">Dashboard</h2>
 
-  </div>
-
-    <div id="portfolio-metrics" class="row row-cards mb-2">
+    <!-- Metrics -->
+    <div id="portfolio-metrics" class="row row-cards mb-4">
       <div class="col-md-2">
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
@@ -295,11 +348,25 @@
       </div>
     </div>
 
-    <div id="date-time">
-      <div id="date">
-        <p>Date: </p><span id="current-date"></span>
-      </div>
-      <span id="current-time"></span>
+    <!-- Top 5 Holdings -->
+    <h3 class="mb-3">Top 5 Holdings</h3>
+    <div class="table-responsive">
+      <table id="top-holdings-table" class="table table-vcenter table-striped">
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Quantity</th>
+            <th>Market Value</th>
+            <th>Unrealized P&L</th>
+            <th>Return %</th>
+          </tr>
+        </thead>
+        <tbody id="top-holdings-body">
+            <tr class="empty-state">
+              <td colspan="5">No portfolio data yet.</td>
+            </tr>
+        </tbody>
+      </table>
     </div>
   </header>
 
@@ -411,78 +478,7 @@
 
 <section id="holdings" class="card mb-4">
   <div class="card-body">
-
-    <div class="portfolio-header">
-
-        <div>
-            <h2 class="card-title mb-0">Portfolio</h2>
-        </div>
-
-        <button id="refresh-data-btn" type="button" class="btn refresh-btn">
-            <i class="ti ti-settings"></i>
-            <span>Refresh Settings</span>
-        </button>
-
-    </div>
-
-
-<div id="refresh-options-panel" class="row g-3 mt-3 d-none">
-
-    <div class="col-md-3">
-        <label class="form-label">Refresh Duration</label>
-
-        <select id="refresh-filter-action" class="form-select">
-            <option value="60000">1 minute</option>
-            <option value="120000">2 minutes</option>
-            <option value="180000">3 minutes</option>
-        </select>
-    </div>
-
-    <div class="col-12">
-        <button id="apply-refresh-btn" 
-                type="button" 
-                class="btn btn-primary">
-            Apply
-        </button>
-    </div>
-
-</div>
-
-    
-    <div id="portfolio-stats" class="row row-cards mb-4">
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="text-muted">Total Cost Basis</div>
-            <div id="portfolio-cost-basis" class="h3 mb-0">$0.00</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="text-muted">Market Value</div>
-            <div id="portfolio-market-value" class="h3 mb-0">$0.00</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="text-muted">Unrealized P&L</div>
-            <div id="portfolio-unrealized-pnl" class="h3 mb-0">$0.00</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="text-muted">Total Return %</div>
-            <div id="portfolio-total-return" class="h3 mb-0">0.00%</div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <h2 class="card-title mb-4">Holdings</h2>
 
     <div class="table-responsive">
       <table id="consolidated-table" class="table table-vcenter table-striped">
@@ -505,24 +501,14 @@
         </tbody>
       </table>
     </div>
-    <div class="row mt-4">
-  <div class="col-md-6">
-    <h5>Portfolio Allocation</h5>
-    <canvas id="portfolio-pie-chart"></canvas>
-  </div>
-
-  <div class="col-md-6">
-    <h5>Total P&L by Holding</h5>
-    <canvas id="pnl-bar-chart"></canvas>
-  </div>
-</div>
   </div>
 </section>
 
-<section id="performance" class="card mb-4 d-none">
+<section id="performance" class="card mb-4">
   <div class="card-body">
-    <h2 class="card-title mb-3">Performance Chart</h2>
+    <h2 class="card-title mb-4">Performance</h2>
 
+    <h3 class="mb-3">Performance Chart</h3>
     <div class="mb-4">
       <div class="btn-group mb-3" role="group">
         <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="1m">1M</button>
@@ -539,11 +525,11 @@
     <div class="row g-3 mb-4">
       <div class="col-md-3">
         <label class="form-label">Start Date</label>
-        <input type="date" id="perf-start-date" class="form-control" />
+        <input type="date" id="perf-start-date" class="form-control">
       </div>
       <div class="col-md-3">
         <label class="form-label">End Date</label>
-        <input type="date" id="perf-end-date" class="form-control" />
+        <input type="date" id="perf-end-date" class="form-control">
       </div>
       <div class="col-md-6 d-flex align-items-end gap-2">
         <button id="perf-load-btn" class="btn btn-primary">Load Performance</button>
@@ -553,12 +539,54 @@
     <div id="performance-chart-container" class="mt-4">
       <canvas id="performance-chart"></canvas>
     </div>
+
+    <!-- Additional Charts -->
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <h4>Portfolio Allocation</h4>
+        <canvas id="portfolio-pie-chart"></canvas>
+      </div>
+
+      <div class="col-md-6">
+        <h5>Total P&L by Holding</h5>
+        <canvas id="pnl-bar-chart"></canvas>
+      </div>
+    </div>
   </div>
 </section>
 
-<section id="transactions" class="card mb-4 d-none">
+<section id="transactions" class="card mb-4">
   <div class="card-body">
-    <h2 class="card-title mb-3">Transaction History</h2>
+    <div class="portfolio-header mb-4">
+      <div>
+        <h2 class="card-title mb-0">Transaction History</h2>
+      </div>
+
+      <button id="refresh-data-btn" type="button" class="btn refresh-btn">
+        <i class="ti ti-settings"></i>
+        <span>Refresh Settings</span>
+      </button>
+    </div>
+
+    <div id="refresh-options-panel" class="row g-3 mt-3 d-none">
+      <div class="col-md-3">
+        <label class="form-label">Refresh Duration</label>
+
+        <select id="refresh-filter-action" class="form-select">
+          <option value="60000">1 minute</option>
+          <option value="120000">2 minutes</option>
+          <option value="180000">3 minutes</option>
+        </select>
+      </div>
+
+      <div class="col-12">
+        <button id="apply-refresh-btn"
+                type="button"
+                class="btn btn-primary">
+          Apply
+        </button>
+      </div>
+    </div>
 
     <form id="history-filter-form" class="row g-3 mb-3">
       <!-- Filter Toggle Button Container -->
@@ -601,7 +629,7 @@
               <option value="<=">&lt;=</option>
               <option value="=">=</option>
             </select>
-            <input type="number" id="history-filter-quantity" class="form-control mt-2" step="any" placeholder="Qty" />
+            <input type="number" id="history-filter-quantity" class="form-control mt-2" step="any" placeholder="Qty">
           </div>
           <div class="col-md-2">
             <label class="form-label">Price</label>
@@ -613,7 +641,7 @@
               <option value="<=">&lt;=</option>
               <option value="=">=</option>
             </select>
-            <input type="text" id="history-filter-price" class="form-control mt-2" placeholder="300" />
+            <input type="text" id="history-filter-price" class="form-control mt-2" placeholder="300">
           </div>
           <div class="col-md-2">
             <label class="form-label">Total Value</label>
@@ -628,7 +656,7 @@
           </div>
           <div class="col-md-2">
             <label class="form-label mt-2">Date</label>
-            <input type="date" id="history-filter-date" class="form-control" />
+            <input type="date" id="history-filter-date" class="form-control">
           </div>
           <div class="col-12 d-flex gap-2 mt-3">
             <button type="submit" class="btn btn-primary">Apply</button>
