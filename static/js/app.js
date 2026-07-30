@@ -13,9 +13,13 @@ let currentHistorySortColumn = "transaction_date"; // Default sort by date
 let currentHistorySortDirection = "desc"; // Descending for most recent first
 let historyCurrentPage = 1;
 const historyRowsPerPage = 5;
+let refreshInterval = 60000;
+let refreshTimer = null;
+let refreshPanel = null;
+let refreshing = false;
 
 async function loadPortfolio(filters = {}) {
-
+  
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
@@ -34,7 +38,6 @@ async function loadPortfolio(filters = {}) {
   await loadPortfolioWithSummary();
   loadHistory(history);
   populateSellDropdown(holdings);
-  populateFilterTickerDropdown();
   clearSellDetails();
 }
 
@@ -141,31 +144,25 @@ async function loadPortfolioWithSummary() {
     const res = await fetch(`${API_BASE}/summary`);
     if (!res.ok) throw new Error("Failed to load summary");
     const summary = await res.json();
-    const totalPnl = summary.total_unrealized_pnl + summary.total_realized_pnl;
-
 
     document.querySelector("#portfolio-cost-basis").textContent = `$${summary.total_cost_basis.toFixed(2)}`;
     document.querySelector("#portfolio-market-value").textContent = `$${summary.total_market_value.toFixed(2)}`;
     document.querySelector("#portfolio-unrealized-pnl").textContent = `$${summary.total_unrealized_pnl.toFixed(2)}`;
     document.querySelector("#portfolio-total-return").textContent = `${summary.total_return_pct.toFixed(2)}%`;
 
-    document.querySelector("#total-value").textContent = `$${summary.total_market_value.toFixed(2)}`;
-    document.querySelector("#total-holdings").textContent = summary.positions.length;
+    document.querySelector("#total-value strong").textContent = `$${summary.total_market_value.toFixed(2)}`;
+    document.querySelector("#total-holdings strong").textContent = summary.positions.length;
 
     let totalShares = 0;
     summary.positions.forEach(pos => {
       totalShares += pos.shares_held;
     });
-    document.querySelector("#total-shares").textContent = totalShares.toFixed(0);
-const sign = totalPnl >= 0 ? "+" : "";
+    document.querySelector("#total-shares strong").textContent = totalShares.toFixed(0);
 
-const gainLossElement = document.querySelector("#total-gain-loss");
+    const sign = summary.total_unrealized_pnl >= 0 ? "+" : "";
+    document.querySelector("#total-gain-loss strong").textContent =
+      `${sign}$${summary.total_unrealized_pnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
 
-gainLossElement.textContent =
-  `${sign}$${totalPnl.toFixed(2)} (${sign}${summary.total_return_pct.toFixed(2)}%)`;
-
-gainLossElement.style.color = totalPnl >= 0 ? "green" : "#ca3423";
-    
     if (!summary.positions || summary.positions.length === 0) {
       const tbody = document.getElementById("consolidated-body");
       tbody.innerHTML = '<tr class="empty-state"><td colspan="8">No portfolio data yet.</td></tr>';
@@ -176,7 +173,6 @@ gainLossElement.style.color = totalPnl >= 0 ? "green" : "#ca3423";
     // Store portfolio data and render with default sorting by ticker
     portfolioData = summary.positions;
     sortPortfolioTable("ticker"); // Apply default sort
-    renderTopHoldings(summary.positions);
     renderPortfolioPieChart(summary.positions);
     renderPnLBarChart(summary.positions);
   } catch (err) {
@@ -203,33 +199,6 @@ function renderPortfolioTable(positions) {
       <td>${marketValueStr}</td>
       <td>${unrealizedPnlStr}</td>
       <td>$${pos.realized_pnl.toFixed(2)}</td>
-    `;
-    tbody.appendChild(row);
-  });
-
-  attachSortableHandlers();
-}
-
-function renderTopHoldings(positions) {
-  const tbody = document.getElementById("top-holdings-body");
-  if (!tbody) return;
-
-  tbody.innerHTML = "";
-
-  const top5 = positions.slice(0, 5).sort((a, b) => b.market_value - a.market_value);
-
-  top5.forEach((pos) => {
-    const row = document.createElement("tr");
-    const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
-    const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
-    const currentPriceStr = pos.current_price !== null ? `$${pos.current_price.toFixed(2)}` : "-";
-
-    row.innerHTML = `
-      <td class="ticker">${pos.ticker}</td>
-      <td>${pos.shares_held}</td>
-      <td>${currentPriceStr}</td>
-      <td>${marketValueStr}</td>
-      <td class="${pos.unrealized_pnl >= 0 ? 'positive' : 'negative'}">${unrealizedPnlStr}</td>
     `;
     tbody.appendChild(row);
   });
@@ -289,14 +258,14 @@ function renderPortfolioPieChart(positions) {
   const values = positions.map(pos => pos.market_value !== null ? pos.market_value : 0);
 
   const colors = [
-  "#1F4E79", // navy blue
-  "#4E79A7", // steel blue
-  "#76B7B2", // teal
-  "#59A14F", // muted green
-  "#9C755F", // bronze/brown
-  "#79706E", // charcoal gray
-  "#B07AA1", // muted purple
-  "#F28E2B"  // muted orange
+    "#4e79a7",
+    "#f28e2b",
+    "#e15759",
+    "#76b7b2",
+    "#59a14f",
+    "#edc948",
+    "#b07aa1",
+    "#ff9da7"
   ];
 
   if (portfolioPieChart) {
@@ -378,7 +347,6 @@ function renderTransactionTable(transactions) {
   });
 
   updateHistoryPagination(transactions.length);
-  attachSortableHandlers();
 }
 
 function updateHistoryPagination(totalItems) {
@@ -479,36 +447,6 @@ function populateSellDropdown(holdings) {
   });
 }
 
-function populateFilterTickerDropdown() {
-  const filterTickerSelect = document.getElementById("history-filter-ticker");
-  if (!filterTickerSelect) return;
-
-  filterTickerSelect.innerHTML = '<option value="">All</option>';
-
-  const uniqueTickers = new Set();
-
-  // Get tickers from transaction history
-  if (historyData && historyData.length > 0) {
-    historyData.forEach((t) => {
-      uniqueTickers.add(t.ticker);
-    });
-  }
-
-  // Also add tickers from holdings
-  if (holdingsData && holdingsData.length > 0) {
-    holdingsData.forEach((h) => {
-      uniqueTickers.add(h.ticker);
-    });
-  }
-
-  Array.from(uniqueTickers).sort().forEach((ticker) => {
-    const option = document.createElement("option");
-    option.value = ticker;
-    option.textContent = ticker;
-    filterTickerSelect.appendChild(option);
-  });
-}
-
 function getPortfolioAvgPrice(ticker, holdings = holdingsData) {
   const matchingHoldings = holdings.filter((holding) => holding.ticker === ticker);
   if (!matchingHoldings.length) {
@@ -550,18 +488,8 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
 
   document.getElementById("sell-quantity-input").value = "";
 
-  try {
-    const response = await fetch(`/api/price/${ticker}`);
-    if (response.ok) {
-      const data = await response.json();
-      document.getElementById("sell-price").textContent = `$${data.price.toFixed(2)}`;
-    } else {
-      document.getElementById("sell-price").textContent = "-";
-    }
-  } catch (err) {
-    console.error("Failed to fetch current price:", err);
-    document.getElementById("sell-price").textContent = "-";
-  }
+  const averagePrice = getPortfolioAvgPrice(holding.ticker, holdingsData);
+  document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
 });
 
 const tickerSelect = document.getElementById("ticker");
@@ -649,51 +577,52 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   loadPortfolio();
 });
 
-const refreshButton = document.getElementById("refresh-data-btn");
-if (refreshButton) {
-  refreshButton.addEventListener("click", () => loadPortfolio());
-}
+document.addEventListener('DOMContentLoaded', function () {
 
-function toggleFilterPanel() {
-  const filterPanel = document.getElementById('filter-options-panel');
-  if (filterPanel) {
-    filterPanel.classList.toggle('d-none');
-  }
-}
+  const toggleBtnRefresh = document.getElementById('refresh-data-btn');
 
-function clearAllFilters() {
-  resetHistoryFilter();
-  loadPortfolio();
-}
+  refreshPanel = document.getElementById('refresh-options-panel');
 
-function handleFilterSubmit(e) {
-  if (e) {
+  toggleBtnRefresh.addEventListener('click', function () {
+    refreshPanel.classList.toggle('d-none');
+  });
+
+});
+
+const historyFilterForm = document.getElementById("history-filter-form");
+if (historyFilterForm) {
+  historyFilterForm.addEventListener("submit", async (e) => {
     e.preventDefault();
-    e.stopPropagation();
-  }
 
-  const filters = {};
-  const action = document.getElementById("history-filter-action")?.value?.trim();
-  const ticker = document.getElementById("history-filter-ticker")?.value?.trim();
-  const quantityOperator = document.getElementById("history-filter-quantity-operator")?.value;
-  const quantityValue = document.getElementById("history-filter-quantity")?.value?.trim();
-  const priceOperator = document.getElementById("history-filter-price-operator")?.value;
-  const priceValue = document.getElementById("history-filter-price")?.value?.trim();
-  const priceRange = document.getElementById("history-filter-price-range")?.value;
-  const dateValue = document.getElementById("history-filter-date")?.value?.trim();
+    const filters = {};
+    const action = document.getElementById("history-filter-action")?.value?.trim();
+    const ticker = document.getElementById("history-filter-ticker")?.value?.trim();
+    const quantityOperator = document.getElementById("history-filter-quantity-operator")?.value;
+    const quantityValue = document.getElementById("history-filter-quantity")?.value?.trim();
+    const priceOperator = document.getElementById("history-filter-price-operator")?.value;
+    const priceValue = document.getElementById("history-filter-price")?.value?.trim();
+    const priceRange = document.getElementById("history-filter-price-range")?.value;
+    const year = document.getElementById("history-filter-year")?.value?.trim();
+    const dateValue = document.getElementById("history-filter-date")?.value?.trim();
 
-  if (action) filters.action = action;
-  if (ticker) filters.ticker = ticker;
-  if (quantityOperator && quantityValue) filters.quantity = `${quantityOperator}${quantityValue}`;
-  if (priceOperator && priceValue) {
-    const normalizedPrice = Number(priceValue).toString();
-    filters.price = `${priceOperator}${normalizedPrice}`;
-  }
-  if (priceRange) filters.price_range = priceRange;
-  if (dateValue) filters.date = dateValue;
+    if (action) filters.action = action;
+    if (ticker) filters.ticker = ticker;
+    if (quantityOperator && quantityValue) filters.quantity = `${quantityOperator}${quantityValue}`;
+    if (priceOperator && priceValue) {
+      const normalizedPrice = Number(priceValue).toString();
+      filters.price = `${priceOperator}${normalizedPrice}`;
+    }
+    if (priceRange) filters.price_range = priceRange;
+    if (year) filters.year = year;
+    if (dateValue) filters.date = dateValue;
 
-  loadPortfolio(filters);
-  return false;
+    if (Object.keys(filters).length === 0) {
+      await loadPortfolio();
+      return;
+    }
+
+    await loadPortfolio(filters);
+  });
 }
 
 const clearFilterButton = document.getElementById("clear-filter-btn");
@@ -906,26 +835,20 @@ document.querySelectorAll(".perf-period-btn").forEach(btn => {
   });
 });
 
-function attachSortableHandlers() {
-  document.querySelectorAll("th.sortable").forEach(th => {
-    th.removeEventListener("click", handleSortClick);
-    th.addEventListener("click", handleSortClick);
+// Add sortable header click handlers
+document.querySelectorAll("th.sortable").forEach(th => {
+  th.addEventListener("click", () => {
+    const column = th.dataset.sort;
+    const table = th.closest("table");
+    const historyBody = table?.querySelector("#history-body");
+
+    if (historyBody) {
+      sortTransactionTable(column);
+    } else {
+      sortPortfolioTable(column);
+    }
   });
-}
-
-function handleSortClick() {
-  const column = this.dataset.sort;
-  const table = this.closest("table");
-  const historyBody = table?.querySelector("#history-body");
-
-  if (historyBody) {
-    sortTransactionTable(column);
-  } else {
-    sortPortfolioTable(column);
-  }
-}
-
-attachSortableHandlers();
+});
 
 // Handle date and load data as soon as the page is ready
 window.addEventListener("DOMContentLoaded", () => {
@@ -960,33 +883,12 @@ window.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-  let refreshing = false;
 
-  async function refreshPortfolio() {
-    if (refreshing) return;
 
-    refreshing = true;
-
-    try {
-      const savedSortColumn = currentSortColumn;
-      const savedSortDirection = currentSortDirection;
-
-      await loadPortfolio();
-
-      if (savedSortColumn !== "ticker") {
-        sortPortfolioTable(savedSortColumn);
-        if (savedSortDirection === "desc") {
-          sortPortfolioTable(savedSortColumn);
-        }
-      }
-    } finally {
-      refreshing = false;
-    }
-}
-
-loadPortfolio(); // Initial load
-setInterval(refreshPortfolio, 60000);
+  loadPortfolio(); // Initial load
+  startAutoRefresh();
 });
+
 
 function renderPnLBarChart(positions) {
   const canvas = document.getElementById("pnl-bar-chart");
@@ -998,7 +900,7 @@ function renderPnLBarChart(positions) {
 );
 
   const colors = values.map(v =>
-    v >= 0 ? "#2ecc71" : "#C0392B"
+    v >= 0 ? "#2ecc71" : "#e74c3c"
   );
 
   if (pnlBarChart) {
@@ -1012,7 +914,6 @@ function renderPnLBarChart(positions) {
       datasets: [{
         label: "Profit / Loss",
         data: values,
-        borderRadius: 8,
         backgroundColor: colors
       }]
     },
@@ -1024,24 +925,13 @@ function renderPnLBarChart(positions) {
           display: false
         }
       },
-      
-
-
       scales: {
-  x: {
-    ticks: {
-      callback: value => "$" + value
-    },
-    grid: {
-      display: false
-    }
-  },
-  y: {
-    grid: {
-      display: false
-    }
-  }
-}
+        x: {
+          ticks: {
+            callback: value => "$" + value
+          }
+        }
+      }
     }
   });
 }
@@ -1050,11 +940,11 @@ document.addEventListener('DOMContentLoaded', function () {
   const toggleBtn = document.getElementById('filter-toggle-btn');
   const filterPanel = document.getElementById('filter-options-panel');
 
-  if (toggleBtn && filterPanel) {
-    toggleBtn.addEventListener('click', function () {
-      filterPanel.classList.toggle('d-none');
-    });
-  }
+  toggleBtn.addEventListener('click', function () {
+    // Toggles the visibility class
+    filterPanel.classList.toggle('d-none');
+  });
+
 });
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -1079,14 +969,54 @@ document.addEventListener("DOMContentLoaded", () => {
             modal.style.display = "none";
         }
     });
+
 });
 
-const filterToggleBtn = document.getElementById('filter-toggle-btn');
-const filterPanel = document.getElementById('filter-options-panel');
-if (filterToggleBtn && filterPanel) {
-  filterToggleBtn.addEventListener('click', function(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    filterPanel.style.display = filterPanel.style.display === 'none' ? 'grid' : 'none';
+  async function refreshPortfolio() {
+    if (refreshing) return;
+
+    refreshing = true;
+
+    try {
+      await loadPortfolio();
+    } finally {
+      refreshing = false;
+    }
+}
+
+function startAutoRefresh() {
+  // Clear existing timer first
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+  }
+
+  refreshTimer = setInterval(async () => {
+    await refreshPortfolio();
+  }, refreshInterval);
+}
+
+const applyRefreshButton = document.getElementById("apply-refresh-btn");
+
+if (applyRefreshButton) {
+  applyRefreshButton.addEventListener("click", () => {
+
+    const selectedDuration =
+      document.getElementById("refresh-filter-action").value;
+
+    refreshInterval = Number(selectedDuration) || 60000;
+
+    startAutoRefresh();
+
+    console.log(
+      `Auto refresh changed to ${refreshInterval / 1000} seconds`
+    );
+
+    alert(
+      `Portfolio will refresh every ${refreshInterval / 60000} minute(s)`
+    );
+
+    document
+      .getElementById("refresh-options-panel")
+      .classList.add("d-none");
   });
 }

@@ -224,36 +224,27 @@ def portfolio_value_series(start_date, end_date, tickers=None):
 def portfolio_summary(current_prices):
     """current_prices: {ticker: live_price_or_None}. Returns per-ticker
     and total cost basis, market value, and realized/unrealized P&L.
-    Uses actual holdings from database as source of truth.
     """
-    from app.models import Holding
-    from sqlalchemy import func
-
     positions = []
     total_market_value = 0.0
     total_cost_basis = 0.0
     total_realized_pnl = 0.0
+    total_invested = 0.0
+    total_divested = 0.0
 
-    # Get consolidated holdings grouped by ticker
-    consolidated = db.session.query(
-        Holding.ticker,
-        func.sum(Holding.quantity).label("total_quantity"),
-        func.avg(Holding.purchase_price).label("avg_price"),
-    ).group_by(Holding.ticker).all()
+    for ticker in all_tickers():
+        pos = replay_position(ticker)
+        total_realized_pnl += pos["realized_pnl"]
+        total_invested += pos["total_invested"]
+        total_divested += pos["total_divested"]
 
-    for ticker, total_quantity, avg_price in consolidated:
-        if total_quantity <= 0:
+        if pos["shares_held"] <= 0:
             continue
 
-        # Get realized P&L from transactions
-        pos = replay_position(ticker)
-        realized_pnl = pos["realized_pnl"]
-        total_realized_pnl += realized_pnl
-
         current_price = current_prices.get(ticker)
-        cost_basis_value = round(total_quantity * avg_price, 2)
+        cost_basis_value = round(pos["shares_held"] * pos["avg_cost"], 2)
         market_value = (
-            round(total_quantity * current_price, 2)
+            round(pos["shares_held"] * current_price, 2)
             if current_price is not None
             else None
         )
@@ -261,8 +252,8 @@ def portfolio_summary(current_prices):
         positions.append(
             {
                 "ticker": ticker,
-                "shares_held": total_quantity,
-                "avg_cost": round(avg_price, 2),
+                "shares_held": pos["shares_held"],
+                "avg_cost": pos["avg_cost"],
                 "current_price": current_price,
                 "cost_basis": cost_basis_value,
                 "market_value": market_value,
@@ -271,7 +262,7 @@ def portfolio_summary(current_prices):
                     if market_value is not None
                     else None
                 ),
-                "realized_pnl": realized_pnl,
+                "realized_pnl": pos["realized_pnl"],
             }
         )
 
@@ -279,11 +270,10 @@ def portfolio_summary(current_prices):
             total_market_value += market_value
         total_cost_basis += cost_basis_value
 
-    total_return_pct = 0.0
-    if total_cost_basis > 0:
-        total_return_pct = round(
-            ((total_market_value + total_realized_pnl - total_cost_basis) / total_cost_basis) * 100, 2
-        )
+    net_pnl = (total_market_value + total_divested) - total_invested
+    total_return_pct = (
+        round((net_pnl / total_invested) * 100, 2) if total_invested else 0.0
+    )
 
     return {
         "positions": positions,
