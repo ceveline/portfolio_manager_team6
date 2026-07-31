@@ -690,4 +690,29 @@ th.sortable.desc .sort-indicator::after {
 .ticker:active {
     opacity: 0.6;
 }
+
+.profile-balance {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-left: 5px solid #22c55e;
+    border-radius: 12px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    margin-right: 1rem;
+    box-shadow: 0 3px 12px rgba(0,0,0,.06);
+}
+
+.balance-label {
+    color: #6b7280;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+}
+
+.balance-amount {
+    margin-top: .35rem;
+    color: #16a34a;
+    font-size: 2rem;
+    font-weight: 700;
 }
