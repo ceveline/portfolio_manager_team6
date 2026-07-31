@@ -287,17 +287,15 @@ main section {
 }
 
 
-
 .support-link {
   margin-top: 0.25rem;
   cursor: pointer;
 }
 
 
-
 .profile-avatar {
-  width: 45px;
-  height: 45px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   background-color: #0f172a;
   color: white;
@@ -347,9 +345,6 @@ main section {
 }
 
 
-
-
-
 .profile-details {
   display: flex;
   flex-direction: column;
@@ -360,6 +355,29 @@ main section {
   font-weight: 600;
   line-height: 1.2;
 }
+
+#profile-avatar-id {
+    display: contents;
+    font-size: x-large;
+}
+
+.form-group {
+  display: flex;          
+  align-items: center;    
+  gap: 10px;              
+  margin-bottom: 15px;    
+}
+
+.form-group p {
+  margin: 0;              
+  min-width: 100px;       
+}
+
+.form-group input {
+  flex: 1;                
+  max-width: 300px;       
+}
+
 
 /* Styling for Filters */
 .filter-symbol {

@@ -6,7 +6,7 @@ from flasgger import swag_from
 from flask import Flask, Blueprint, jsonify, request, render_template
 
 from app import db, performance, price_backfill
-from app.models import Holding, PriceHistory, Transaction
+from app.models import User, Holding, PriceHistory, Transaction
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
@@ -74,6 +74,90 @@ def get_stock_price(ticker):
     return jsonify({"ticker": ticker.upper(), "price": price}), 200
 
 
+@api.route("/users", methods=["GET"])
+def list_users():
+    users = User.query.all()
+
+    return jsonify(
+        [user.to_dict() for user in users]
+    ), 200
+    
+@api.route("/users/<int:user_id>", methods=["GET"])
+def get_user(user_id):
+    user = User.query.get_or_404(user_id)
+
+    return jsonify(user.to_dict()), 200
+
+@api.route("/users", methods=["POST"])
+def create_user():
+
+    data = request.get_json(force=True) or {}
+
+    first_name = data.get("first_name")
+    last_name = data.get("last_name")
+    email = data.get("email")
+    account_balance = data.get("account_balance", 0)
+
+    if not first_name or not last_name or not email:
+        return jsonify({
+            "error": "first_name, last_name and email are required"
+        }), 400
+
+
+    existing_user = User.query.filter_by(email=email).first()
+
+    if existing_user:
+        return jsonify({
+            "error": "Email already exists"
+        }), 409
+
+
+    user = User(
+        first_name=first_name,
+        last_name=last_name,
+        email=email,
+        account_balance=account_balance
+    )
+
+    db.session.add(user)
+    db.session.commit()
+
+
+    return jsonify(user.to_dict()), 201
+
+@api.route("/users/<int:user_id>", methods=["PUT"])
+def update_user(user_id):
+
+    user = User.query.get_or_404(user_id)
+
+    data = request.get_json(force=True) or {}
+
+
+    user.first_name = data.get(
+        "first_name",
+        user.first_name
+    )
+
+    user.last_name = data.get(
+        "last_name",
+        user.last_name
+    )
+
+    user.email = data.get(
+        "email",
+        user.email
+    )
+
+    user.account_balance = data.get(
+        "account_balance",
+        user.account_balance
+    )
+
+
+    db.session.commit()
+
+    return jsonify(user.to_dict()), 200
+
 @api.route("/holdings", methods=["GET"])
 @swag_from(
     {
@@ -82,6 +166,7 @@ def get_stock_price(ticker):
         "responses": {200: {"description": "List of holdings"}},
     }
 )
+
 def list_holdings():
     print("Holdings requested at", datetime.now())
     holdings = Holding.query.all()
