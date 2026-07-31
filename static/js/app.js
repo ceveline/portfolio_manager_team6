@@ -19,32 +19,56 @@ let refreshTimer = null;
 let refreshPanel = null;
 let refreshing = false;
 
+// Navigation tab switching
 function switchTab(tabName, e) {
   if (e) e.preventDefault();
 
+  // Map tab names to section IDs
+  const sectionMap = {
+    'dashboard': 'dashboard',
+    'holdings': 'holdings',
+    'buy': 'buy',
+    'sell': 'sell',
+    'performance': 'performance',
+    'transactions': 'transactions'
+  };
+
+  const targetId = sectionMap[tabName] || 'holdings';
+
+  // Hide all sections, show target section
+  document.querySelectorAll('main > section').forEach(section => {
+    section.style.display = 'none';
+  });
+
+  const targetSection = document.getElementById(targetId);
+  if (targetSection) {
+    targetSection.style.display = 'block';
+  }
+
   // Update active nav item
-  const navItems = document.querySelectorAll('.nav-item');
-  navItems.forEach(item => item.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.classList.remove('active');
+  });
 
   const clickedItem = document.querySelector(`.nav-item[onclick*="${tabName}"]`);
   if (clickedItem) {
     clickedItem.classList.add('active');
   }
+}
 
-  // Show/hide sections
-  const sections = document.querySelectorAll('main section');
-  sections.forEach(section => {
-    section.classList.add('d-none');
-  });
-
-  let targetId = tabName;
-  if (tabName === 'dashboard') {
-    targetId = 'holdings';
+// Modal functions
+function openModal(modalId, e) {
+  if (e) e.preventDefault();
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = 'block';
   }
+}
 
-  const targetSection = document.getElementById(targetId);
-  if (targetSection) {
-    targetSection.classList.remove('d-none');
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) {
+    modal.style.display = 'none';
   }
 }
 
@@ -82,8 +106,10 @@ async function loadUsers() {
 }
 
 async function loadPortfolio(filters = {}) {
-  
-  const holdingsRes = await fetch(`${API_BASE}/holdings`);
+
+  const holdingsRes = await fetch(`${API_BASE}/holdings?t=${Date.now()}`, {
+    cache: 'no-store'
+  });
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
 
@@ -94,8 +120,11 @@ async function loadPortfolio(filters = {}) {
     }
   });
 
-  const historyUrl = `${API_BASE}/transactions${params.toString() ? `?${params.toString()}` : ""}`;
-  const historyRes = await fetch(historyUrl);
+  const paramsStr = params.toString();
+  const historyUrl = `${API_BASE}/transactions?${paramsStr ? `${paramsStr}&` : ""}t=${Date.now()}`;
+  const historyRes = await fetch(historyUrl, {
+    cache: 'no-store'
+  });
   const history = await historyRes.json();
 
   await loadPortfolioWithSummary();
@@ -271,6 +300,7 @@ async function loadPortfolioWithSummary() {
     // Store portfolio data and render with default sorting by ticker
     portfolioData = summary.positions;
     sortPortfolioTable("ticker"); // Apply default sort
+    renderTopHoldings(summary.positions);
     renderPortfolioPieChart(summary.positions);
     renderPnLBarChart(summary.positions);
   } catch (err) {
@@ -297,6 +327,44 @@ function renderPortfolioTable(positions) {
       <td>${marketValueStr}</td>
       <td>${unrealizedPnlStr}</td>
       <td>$${pos.realized_pnl.toFixed(2)}</td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+
+function renderTopHoldings(positions) {
+  const tbody = document.getElementById("top-holdings-body");
+  if (!tbody) return;
+
+  tbody.innerHTML = "";
+
+  // Sort by market value and get top 5
+  const top5 = positions
+    .sort((a, b) => (b.market_value || 0) - (a.market_value || 0))
+    .slice(0, 5);
+
+  if (top5.length === 0) {
+    tbody.innerHTML = '<tr class="empty-state"><td colspan="5">No portfolio data yet.</td></tr>';
+    return;
+  }
+
+  top5.forEach((pos) => {
+    const row = document.createElement("tr");
+    const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
+    const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
+
+    let returnPctStr = "-";
+    if (pos.cost_basis && pos.cost_basis > 0) {
+      const returnPct = (pos.unrealized_pnl / pos.cost_basis) * 100;
+      returnPctStr = `${returnPct.toFixed(1)}%`;
+    }
+
+    row.innerHTML = `
+      <td>${pos.ticker}</td>
+      <td>${pos.shares_held}</td>
+      <td>${marketValueStr}</td>
+      <td>${unrealizedPnlStr}</td>
+      <td>${returnPctStr}</td>
     `;
     tbody.appendChild(row);
   });
@@ -552,26 +620,28 @@ function populateSellDropdown(holdings) {
   const sellSelect = document.getElementById("sell-ticker");
   sellSelect.innerHTML = '<option value="">Select a stock to sell...</option>';
 
-  // Consolidate holdings by ticker and store available quantities
+  // Consolidate holdings by ticker and store all IDs for that ticker
   const consolidatedMap = {};
   availableQuantities = {}; // Reset available quantities
+  window.holdingsByTicker = {}; // Store all holding IDs for each ticker
 
   holdings.forEach((h) => {
     if (!consolidatedMap[h.ticker]) {
       consolidatedMap[h.ticker] = {
         ticker: h.ticker,
-        totalQuantity: 0,
-        firstId: h.id
+        totalQuantity: 0
       };
+      window.holdingsByTicker[h.ticker] = [];
     }
     consolidatedMap[h.ticker].totalQuantity += Number(h.quantity || 0);
+    window.holdingsByTicker[h.ticker].push({ id: h.id, quantity: h.quantity });
   });
 
   // Store available quantities and populate dropdown
   Object.values(consolidatedMap).forEach((consolidated) => {
     availableQuantities[consolidated.ticker] = consolidated.totalQuantity;
     const option = document.createElement("option");
-    option.value = consolidated.firstId;
+    option.value = consolidated.ticker;
     option.textContent = `${consolidated.ticker} (${consolidated.totalQuantity} shares)`;
     option.dataset.ticker = consolidated.ticker;
     option.dataset.availableQuantity = consolidated.totalQuantity;
@@ -620,7 +690,7 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
 
   document.getElementById("sell-quantity-input").value = "";
 
-  const averagePrice = getPortfolioAvgPrice(holding.ticker, holdingsData);
+  const averagePrice = getPortfolioAvgPrice(ticker, holdingsData);
   document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
 });
 
@@ -677,7 +747,6 @@ if (buyMessage) {
       await loadPortfolio();
     } catch (err) {
       console.error("Buy failed:", err);
-      alert(err.message);
     }
   });
 }
@@ -685,13 +754,11 @@ if (buyMessage) {
 document.getElementById("sell-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const holdingId = document.getElementById("sell-ticker").value;
-  const selectedOption = document.querySelector(`#sell-ticker option[value="${holdingId}"]`);
-  const ticker = selectedOption?.dataset.ticker;
+  const ticker = document.getElementById("sell-ticker").value;
   const quantity = parseFloat(document.getElementById("sell-quantity-input").value);
   const sellDate = getTodayDate();
 
-  if (!holdingId) {
+  if (!ticker) {
     alert("Please select a stock to sell");
     return;
   }
@@ -708,9 +775,13 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
     return;
   }
 
-  const url = new URL(`${API_BASE}/holdings/${holdingId}`, window.location.origin);
-  url.searchParams.append("quantity", quantity);
-  if (sellDate) url.searchParams.append("sell_date", sellDate);
+  try {
+    // Delete from multiple holdings if needed (FIFO)
+    let remainingQuantity = quantity;
+    const holdings = window.holdingsByTicker[ticker] || [];
+
+    for (const holding of holdings) {
+      if (remainingQuantity <= 0) break;
 
   await fetch(url, { method: "DELETE" });
 const sellMessage = document.getElementById("sell-success-message");
@@ -725,6 +796,25 @@ if (sellMessage) {
   e.target.reset();
   resetHistoryFilter();
   loadPortfolio();
+      const quantityToDelete = Math.min(remainingQuantity, holding.quantity);
+      const url = new URL(`${API_BASE}/holdings/${holding.id}`, window.location.origin);
+      url.searchParams.append("quantity", quantityToDelete);
+      if (sellDate) url.searchParams.append("sell_date", sellDate);
+
+      const response = await fetch(url, { method: "DELETE" });
+      if (!response.ok) {
+        throw new Error(`Failed to sell ${quantityToDelete} shares`);
+      }
+
+      remainingQuantity -= quantityToDelete;
+    }
+
+    e.target.reset();
+    resetHistoryFilter();
+    await loadPortfolio();
+  } catch (error) {
+    console.error(error);
+  }
 });
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -1099,76 +1189,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
 });
 
-function openModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = "block";
-    }
-}
-
-function closeModal(modalId) {
-    const modal = document.getElementById(modalId);
-    if (modal) {
-        modal.style.display = "none";
-    }
-}
-
 document.addEventListener("DOMContentLoaded", () => {
-
-    const settingsBtn = document.getElementById("settings-btn");
-    const supportBtn = document.getElementById("support-btn");
-    const profileBtn = document.getElementById("profile-btn");
-    const settingsModal = document.getElementById("settings-modal");
-    const supportModal = document.getElementById("support-modal");
-    const profileModal = document.getElementById("user-profile-modal");
-
-    if (settingsBtn && settingsModal) {
-        settingsBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            openModal("settings-modal");
-        });
-    }
-
-    if (supportBtn && supportModal) {
-        supportBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            openModal("support-modal");
-        });
-    }
-
-    if (profileBtn && profileModal) {
-        profileBtn.addEventListener("click", (e) => {
-            e.preventDefault();
-            openModal("user-profile-modal");
-        });
-    }
-
-    const closeButtons = document.querySelectorAll(".close-profile");
-    closeButtons.forEach(btn => {
-        btn.addEventListener("click", (e) => {
-            const modal = e.target.closest(".profile-modal");
-            if (modal) {
-                modal.style.display = "none";
-            }
-        });
+    // Initialize - hide all sections except dashboard
+    document.querySelectorAll('main > section').forEach(section => {
+        section.style.display = 'none';
     });
+    const dashboardSection = document.getElementById('dashboard');
+    if (dashboardSection) {
+        dashboardSection.style.display = 'block';
+    }
 
+    // Close modal when clicking outside
     window.addEventListener("click", (e) => {
-        if (e.target.classList.contains("profile-modal")) {
+        if (e.target.classList && e.target.classList.contains("profile-modal")) {
             e.target.style.display = "none";
         }
     });
-
-    // Initialize sections - hide all except holdings
-    const sections = document.querySelectorAll('main section');
-    sections.forEach(section => {
-        section.classList.add('d-none');
-    });
-    const holdingsSection = document.getElementById('holdings');
-    if (holdingsSection) {
-        holdingsSection.classList.remove('d-none');
-    }
-
 });
 
   async function refreshPortfolio() {
@@ -1177,7 +1213,36 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshing = true;
 
     try {
-      await loadPortfolio();
+      // Store current pagination and sorting state
+      const currentPage = historyCurrentPage;
+      const currentSort = currentSortColumn;
+      const currentSortDir = currentSortDirection;
+
+      // Load fresh data with cache-busting
+      const holdingsRes = await fetch(`${API_BASE}/holdings?t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      const holdings = await holdingsRes.json();
+      holdingsData = holdings;
+
+      const historyRes = await fetch(`${API_BASE}/transactions?t=${Date.now()}`, {
+        cache: 'no-store'
+      });
+      const history = await historyRes.json();
+
+      // Refresh metrics but keep history state
+      await loadPortfolioWithSummary();
+      populateSellDropdown(holdings);
+      clearSellDetails();
+
+      // Restore pagination and sorting (don't reload history)
+      historyCurrentPage = currentPage;
+      currentSortColumn = currentSort;
+      currentSortDirection = currentSortDir;
+      historyData = history;
+
+      // Re-render with preserved state
+      sortTransactionTable(currentSort);
     } finally {
       refreshing = false;
     }
