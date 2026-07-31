@@ -45,34 +45,42 @@ function switchTab(tabName, e) {
 }
 
 async function loadUsers() {
-  var usernameEl = document.getElementById("profile-btn");
-  var userAvatarEl = document.getElementById("profile-avatar-id");
-  var firstNameEl = document.getElementById("first-name-value");
-  var lastNameEl = document.getElementById("last-name-value");
-  var emailEl = document.getElementById("email-value");
 
+  const usernameEl = document.getElementById("profile-btn");
+  const userAvatarEl = document.getElementById("profile-avatar-id");
+
+  const firstNameEl = document.getElementById("first-name-value");
+  const lastNameEl = document.getElementById("last-name-value");
+  const emailEl = document.getElementById("email-value");
 
   try {
-    
-    const userRes = await fetch(`${API_BASE}/users/1`);
-    const user = await userRes.json(); 
 
-    const firstName = `${user.first_name}`;
-    const lastName = `${user.last_name}`;
-    const email = `${user.email}`;
-    const fullName = firstName + " " + lastName;
-    const avatarName = firstName.charAt(0).toUpperCase() + lastName.charAt(0).toUpperCase();
+    const res = await fetch(`${API_BASE}/users/1`);
+
+    if (!res.ok) {
+      throw new Error("Unable to load user");
+    }
+
+    const user = await res.json();
+
+    // save id globally
+    window.currentUserId = user.id;
+
+    const fullName = `${user.first_name} ${user.last_name}`;
 
     usernameEl.textContent = fullName;
-    userAvatarEl.textContent = avatarName;
 
-    // for the profile modal
-    firstNameEl.value = firstName;
-    lastNameEl.value = lastName;
-    emailEl.value = email;
+    userAvatarEl.textContent =
+      user.first_name.charAt(0).toUpperCase() +
+      user.last_name.charAt(0).toUpperCase();
 
-  } catch (error) {
-    console.error("Error loading user:", error);
+    firstNameEl.value = user.first_name;
+    lastNameEl.value = user.last_name;
+    emailEl.value = user.email;
+
+  }
+  catch (err) {
+    console.error(err);
   }
 
 }
@@ -1373,6 +1381,91 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
+    const editProfileBtn = document.getElementById("edit-profile-btn");
+    const saveProfileBtn = document.getElementById("save-profile-btn");
+
+    if (editProfileBtn && saveProfileBtn) {
+
+        editProfileBtn.addEventListener("click", () => {
+
+            document.getElementById("first-name-value").readOnly = false;
+            document.getElementById("last-name-value").readOnly = false;
+            document.getElementById("email-value").readOnly = false;
+
+            editProfileBtn.style.display = "none";
+            saveProfileBtn.style.display = "inline-block";
+
+            document.getElementById("first-name-value").focus();
+
+        });
+
+
+        saveProfileBtn.addEventListener("click", async () => {
+
+            const body = {
+
+                first_name: document.getElementById("first-name-value").value.trim(),
+
+                last_name: document.getElementById("last-name-value").value.trim(),
+
+                email: document.getElementById("email-value").value.trim()
+
+            };
+
+            try {
+
+                const response = await fetch(
+                    `${API_BASE}/users/${window.currentUserId}`,
+                    {
+                        method: "PUT",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(body)
+                    }
+                );
+
+                if (!response.ok) {
+
+                    const error = await response.json();
+
+                    throw new Error(error.error || "Unable to save");
+
+                }
+
+                const updatedUser = await response.json();
+
+                // Make inputs readonly again
+                document.getElementById("first-name-value").readOnly = true;
+                document.getElementById("last-name-value").readOnly = true;
+                document.getElementById("email-value").readOnly = true;
+
+                // Update sidebar/profile button
+                document.getElementById("profile-btn").textContent =
+                    updatedUser.first_name + " " + updatedUser.last_name;
+
+                document.getElementById("profile-avatar-id").textContent =
+                    updatedUser.first_name.charAt(0).toUpperCase() +
+                    updatedUser.last_name.charAt(0).toUpperCase();
+
+                editProfileBtn.style.display = "inline-block";
+                saveProfileBtn.style.display = "none";
+
+                alert("Profile updated successfully!");
+
+            }
+            catch (err) {
+
+                console.error(err);
+
+                alert(err.message);
+
+            }
+
+        });
+
+    }
+
     window.addEventListener("click", (e) => {
         if (e.target.classList.contains("profile-modal")) {
             e.target.style.display = "none";
@@ -1441,3 +1534,4 @@ if (applyRefreshButton) {
       .classList.add("d-none");
   });
 }
+
