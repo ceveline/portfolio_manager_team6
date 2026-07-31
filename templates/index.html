@@ -622,13 +622,28 @@
         <span class="close-profile" onclick="closeModal('user-profile-modal')">&times;</span>
 
         <h2>Profile</h2>
-        <!-- Added class="form-group" to these rows -->
-        <div class="form-group"><p><strong>First Name:</strong></p><input type="text" id="first-name-value" readonly></input></div>
-        <div class="form-group"><p><strong>Last Name:</strong></p><input type="text" id="last-name-value" readonly></input></div>
-        <div class="form-group"><p><strong>Email:</strong></p><input type="text" id="email-value" readonly></input></div>
+
+        <div class="form-group">
+            <p><strong>First Name:</strong></p>
+            <input type="text" id="first-name-value" readonly>
+        </div>
+
+        <div class="form-group">
+            <p><strong>Last Name:</strong></p>
+            <input type="text" id="last-name-value" readonly>
+        </div>
+
+        <div class="form-group">
+            <p><strong>Email:</strong></p>
+            <input type="email" id="email-value" readonly>
+        </div>
 
         <button class="btn btn-primary" id="edit-profile-btn">
             Edit Profile
+        </button>
+
+        <button class="btn btn-success" id="save-profile-btn" style="display:none;">
+            Save Profile
         </button>
     </div>
 </div>
