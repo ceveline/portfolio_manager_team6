@@ -799,8 +799,20 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
 
   document.getElementById("sell-quantity-input").value = "";
 
-  const averagePrice = getPortfolioAvgPrice(holding.ticker, holdingsData);
-  document.getElementById("sell-price").textContent = `$${averagePrice.toFixed(2)}`;
+  // Fetch and display current price
+  document.getElementById("sell-price").textContent = "Loading...";
+  try {
+    const res = await fetch(`${API_BASE}/price/${encodeURIComponent(ticker)}`);
+    const payload = await res.json();
+    if (res.ok && payload.price) {
+      document.getElementById("sell-price").textContent = `$${payload.price.toFixed(2)}`;
+    } else {
+      document.getElementById("sell-price").textContent = "-";
+    }
+  } catch (err) {
+    console.error("Error fetching sell price:", err);
+    document.getElementById("sell-price").textContent = "-";
+  }
 });
 
 const tickerSelect = document.getElementById("ticker");
@@ -816,6 +828,7 @@ if (holdingForm) {
   holdingForm.addEventListener("submit", async (e) => {
     e.preventDefault();
 
+    const errorEl = document.getElementById("buy-error-message");
     const ticker = document.getElementById("ticker")?.value?.trim();
     const quantity = parseFloat(document.getElementById("quantity")?.value || "");
     let purchasePrice = getDisplayedPurchasePrice();
@@ -823,7 +836,9 @@ if (holdingForm) {
 
     // Validate quantity
     if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
-      alert("Quantity must be a whole number (1, 2, 3, ...)");
+      errorEl.textContent = "Quantity must be a whole number (1, 2, 3, ...)";
+      errorEl.classList.remove("d-none");
+      setTimeout(() => errorEl.classList.add("d-none"), 4000);
       return;
     }
 
@@ -856,7 +871,10 @@ if (buyMessage) {
       await loadPortfolio();
     } catch (err) {
       console.error("Buy failed:", err);
-      alert(err.message);
+      const errorEl = document.getElementById("buy-error-message");
+      errorEl.textContent = err.message || "Failed to buy stock";
+      errorEl.classList.remove("d-none");
+      setTimeout(() => errorEl.classList.add("d-none"), 4000);
     }
   });
 }
@@ -864,43 +882,65 @@ if (buyMessage) {
 document.getElementById("sell-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const holdingId = document.getElementById("sell-ticker").value;
-  const selectedOption = document.querySelector(`#sell-ticker option[value="${holdingId}"]`);
+  const sellTickerEl = document.getElementById("sell-ticker");
+  const selectedValue = sellTickerEl.value;
+  const selectedOption = sellTickerEl.options[sellTickerEl.selectedIndex];
   const ticker = selectedOption?.dataset.ticker;
-  const quantity = parseFloat(document.getElementById("sell-quantity-input").value);
+  let quantityToSell = parseFloat(document.getElementById("sell-quantity-input").value);
   const sellDate = getTodayDate();
 
-  if (!holdingId) {
-    alert("Please select a stock to sell");
+  const errorEl = document.getElementById("sell-error-message");
+
+  if (!selectedValue || !ticker) {
+    errorEl.textContent = "Please select a stock to sell";
+    errorEl.classList.remove("d-none");
+    setTimeout(() => errorEl.classList.add("d-none"), 4000);
     return;
   }
 
-  if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
-    alert("Quantity must be a whole number (1, 2, 3, ...)");
+  if (!Number.isFinite(quantityToSell) || quantityToSell <= 0 || !Number.isInteger(quantityToSell)) {
+    errorEl.textContent = "Quantity must be a whole number (1, 2, 3, ...)";
+    errorEl.classList.remove("d-none");
+    setTimeout(() => errorEl.classList.add("d-none"), 4000);
     return;
   }
 
   // Use the stored available quantity from dropdown
   const availableQuantity = availableQuantities[ticker] || 0;
-  if (quantity > availableQuantity) {
-    alert(`Cannot sell ${quantity} shares. Only ${availableQuantity} shares available.`);
+  if (quantityToSell > availableQuantity) {
+    errorEl.textContent = `Cannot sell ${quantityToSell} shares. Only ${availableQuantity} shares available.`;
+    errorEl.classList.remove("d-none");
+    setTimeout(() => errorEl.classList.add("d-none"), 4000);
     return;
   }
 
-  const url = new URL(`${API_BASE}/holdings/${holdingId}`, window.location.origin);
-  url.searchParams.append("quantity", quantity);
-  if (sellDate) url.searchParams.append("sell_date", sellDate);
+  // FIFO deletion: delete from holdings in order until quantity is satisfied
+  const holdingsToDelete = holdingsData.filter(h => h.ticker === ticker).sort((a, b) => {
+    // Sort by purchase date (earliest first for FIFO)
+    return new Date(a.purchase_date) - new Date(b.purchase_date);
+  });
 
-  await fetch(url, { method: "DELETE" });
-const sellMessage = document.getElementById("sell-success-message");
+  for (const holding of holdingsToDelete) {
+    if (quantityToSell <= 0) break;
 
-if (sellMessage) {
-  sellMessage.textContent = `Successfully sold ${quantity} shares of ${ticker}`;
-  sellMessage.classList.remove("d-none");
-  setTimeout(() => {
-    sellMessage.classList.add("d-none");
-  }, 4000);
-}
+    const sellQty = Math.min(quantityToSell, holding.quantity);
+    const url = new URL(`${API_BASE}/holdings/${holding.id}`, window.location.origin);
+    url.searchParams.append("quantity", sellQty);
+    if (sellDate) url.searchParams.append("sell_date", sellDate);
+
+    await fetch(url, { method: "DELETE" });
+    quantityToSell -= sellQty;
+  }
+
+  const sellMessage = document.getElementById("sell-success-message");
+  if (sellMessage) {
+    sellMessage.textContent = `Successfully sold ${availableQuantity - quantityToSell} shares of ${ticker}`;
+    sellMessage.classList.remove("d-none");
+    setTimeout(() => {
+      sellMessage.classList.add("d-none");
+    }, 4000);
+  }
+
   e.target.reset();
   resetHistoryFilter();
   loadPortfolio();
@@ -909,12 +949,13 @@ if (sellMessage) {
 document.addEventListener('DOMContentLoaded', function () {
 
   const toggleBtnRefresh = document.getElementById('refresh-data-btn');
-
   refreshPanel = document.getElementById('refresh-options-panel');
 
-  toggleBtnRefresh.addEventListener('click', function () {
-    refreshPanel.classList.toggle('d-none');
-  });
+  if (toggleBtnRefresh) {
+    toggleBtnRefresh.addEventListener('click', function () {
+      refreshPanel.classList.toggle('d-none');
+    });
+  }
 
 });
 
