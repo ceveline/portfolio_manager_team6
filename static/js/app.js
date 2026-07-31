@@ -94,6 +94,9 @@ async function loadUsers() {
   const lastNameEl = document.getElementById("last-name-value");
   const emailEl = document.getElementById("email-value");
 
+  const balanceEl = document.getElementById("user-balance-amount");
+
+
   try {
 
     const res = await fetch(`${API_BASE}/users/1`);
@@ -118,6 +121,16 @@ async function loadUsers() {
     firstNameEl.value = user.first_name;
     lastNameEl.value = user.last_name;
     emailEl.value = user.email;
+    
+    if (balanceEl) {
+
+      const formattedBalance = Number(user.account_balance).toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD'
+      });
+      
+      balanceEl.textContent = formattedBalance;
+    }
 
   }
   catch (err) {
@@ -125,6 +138,7 @@ async function loadUsers() {
   }
 
 }
+
 
 // Ticker modal functions
 function openTickerModal(ticker) {

@@ -64,31 +64,39 @@
       <header class="dashboard-header">
 
   <div class="header-top">
-    <div class="header-banner">
-  <h1>My Portfolio</h1>
-  <p class="text-muted">
-    Monitor holdings, performance, and portfolio insights
-  </p>
-</div>
+      <div class="header-banner">
+      <h1>My Portfolio</h1>
+      <p class="text-muted">
+        Monitor holdings, performance, and portfolio insights
+      </p>
+    </div>
 
-  <div class="profile-section">
+    <div class="profile-section">
 
-  <div class="profile-top">
-    <div class="profile-avatar"><p id="profile-avatar-id"></p></div>
+      <div class="profile-balance">
+        <div class="balance-label">
+            💰 User Balance
+        </div>
+        <div class="balance-amount" id="user-balance-amount">
+            $0.00
+        </div>
+      </div>
 
-    <div class="profile-details">
-        <div class="profile-name"><a href="#" id="profile-btn" style="font-size: large;" onclick="openModal('user-profile-modal'); return false"></a></div>
+      <div class="profile-top">
+        <div class="profile-avatar"><p id="profile-avatar-id"></p></div>
 
-        <div style="display: flex; flex-direction: column; gap: 0.05rem; font-size: 0.875rem; line-height: 1;">
-          <a href="#" id="settings-btn" onclick="openModal('settings-modal'); return false;">Settings</a>
-          <a href="#" id="support-btn" onclick="openModal('support-modal'); return false;">Support</a>
+        <div class="profile-details">
+            <div class="profile-name"><a href="#" id="profile-btn" style="font-size: large;" onclick="openModal('user-profile-modal'); return false"></a></div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.05rem; font-size: 0.875rem; line-height: 1;">
+              <a href="#" id="settings-btn" onclick="openModal('settings-modal'); return false;">Settings</a>
+              <a href="#" id="support-btn" onclick="openModal('support-modal'); return false;">Support</a>
+            </div>
         </div>
     </div>
 
+    
   </div>
-
-
-</div>
 
 
   </div>
