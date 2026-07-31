@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from app import db
 
@@ -57,7 +57,7 @@ class Transaction(db.Model):
     ticker = db.Column(db.String(10), nullable=False, index=True)
     quantity = db.Column(db.Float, nullable=False)
     price = db.Column(db.Float, nullable=False)
-    transaction_date = db.Column(db.Date, nullable=False, default=date.today)
+    transaction_date = db.Column(db.DateTime, nullable=False, default=datetime.now)
 
     def to_dict(self):
         return {
