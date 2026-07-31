@@ -588,13 +588,106 @@ th.sortable.desc .sort-indicator::after {
   border: 1px solid #f5c2c7;
   padding: 10px;
   border-radius: 5px;
+  font-weight: bold;
 }
 
-.error-message {
-  color: #dc3545;
-  background-color: #f8d7da;
-  border: 1px solid #f5c2c7;
-  padding: 10px;
-  border-radius: 5px;
-  font-weight: bold;
+/* Ticker Modal Styles */
+.ticker-modal {
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ticker-modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    max-width: 600px;
+    width: 90%;
+}
+
+.ticker-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.ticker-modal-header h2 {
+    color: #0f172a;
+    font-size: 1.5rem;
+    margin: 0;
+}
+
+.ticker-modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ticker-modal-close:hover {
+    color: #0f172a;
+}
+
+.ticker-modal-body {
+    padding: 2rem;
+}
+
+.ticker-info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+}
+
+.ticker-info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.ticker-info-label {
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.ticker-info-value {
+    font-size: 1rem;
+    color: #0f172a;
+    font-weight: 500;
+}
+
+.ticker {
+    cursor: pointer;
+    color: #0066cc;
+    text-decoration: underline;
+    transition: all 0.2s ease;
+    font-weight: 500;
+}
+
+.ticker:hover {
+    color: #0052a3;
+    opacity: 0.8;
+    text-decoration: underline;
+}
+
+.ticker:active {
+    opacity: 0.6;
+}
 }

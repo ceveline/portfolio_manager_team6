@@ -335,8 +335,6 @@ def portfolio_summary(current_prices):
             ((total_market_value + total_realized_pnl - total_cost_basis) / total_cost_basis) * 100, 2
         )
 
-    win_rate = calculate_win_rate()
-
     return {
         "positions": positions,
         "total_market_value": round(total_market_value, 2),
@@ -344,7 +342,4 @@ def portfolio_summary(current_prices):
         "total_unrealized_pnl": round(total_market_value - total_cost_basis, 2),
         "total_realized_pnl": round(total_realized_pnl, 2),
         "total_return_pct": total_return_pct,
-        "win_rate_pct": win_rate["win_rate_pct"],
-        "winning_trades": win_rate["winning_trades"],
-        "total_trades": win_rate["total_trades"],
     }

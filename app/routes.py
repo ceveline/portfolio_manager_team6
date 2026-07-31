@@ -81,7 +81,7 @@ def list_users():
     return jsonify(
         [user.to_dict() for user in users]
     ), 200
-    
+
 @api.route("/users/<int:user_id>", methods=["GET"])
 def get_user(user_id):
     user = User.query.get_or_404(user_id)
@@ -158,6 +158,48 @@ def update_user(user_id):
 
     return jsonify(user.to_dict()), 200
 
+@api.route("/ticker/<ticker>", methods=["GET"])
+@swag_from(
+    {
+        "tags": ["Stock Data"],
+        "summary": "Get detailed ticker information from Yahoo Finance",
+        "parameters": [
+            {"name": "ticker", "in": "path", "type": "string", "required": True}
+        ],
+        "responses": {
+            200: {"description": "Detailed ticker information"},
+            400: {"description": "Invalid ticker or unable to fetch info"}
+        },
+    }
+)
+def get_ticker_info(ticker):
+    ticker_upper = ticker.upper()
+
+    try:
+        stock = yf.Ticker(ticker_upper, session=_yf_session)
+        info = stock.info
+
+        if not info:
+            return jsonify({"error": f"No data found for {ticker_upper}"}), 400
+
+        return jsonify({
+            "ticker": ticker_upper,
+            "name": info.get("longName", ""),
+            "sector": info.get("sector", ""),
+            "industry": info.get("industry", ""),
+            "currentPrice": info.get("currentPrice", None),
+            "fiftyTwoWeekHigh": info.get("fiftyTwoWeekHigh", None),
+            "fiftyTwoWeekLow": info.get("fiftyTwoWeekLow", None),
+            "marketCap": info.get("marketCap", None),
+            "peRatio": info.get("trailingPE", None),
+            "dividendYield": info.get("dividendYield", None),
+            "beta": info.get("beta", None),
+            "avgVolume": info.get("averageVolume", None),
+            "website": info.get("website", ""),
+        }), 200
+    except Exception as e:
+        print(f"Failed to get ticker info for {ticker_upper}: {e}")
+        return jsonify({"error": f"Could not fetch info for {ticker_upper}"}), 400
 @api.route("/holdings", methods=["GET"])
 @swag_from(
     {
@@ -530,6 +572,19 @@ def get_summary():
     tickers = performance.all_tickers()
     current_prices = {t: _fetch_current_price(t) for t in tickers}
     return jsonify(performance.portfolio_summary(current_prices)), 200
+
+
+@api.route("/win-rate", methods=["GET"])
+@swag_from(
+    {
+        "tags": ["Portfolio"],
+        "summary": "Calculate win rate: percentage of sell transactions that were profitable",
+        "responses": {200: {"description": "Win rate statistics"}},
+    }
+)
+def get_win_rate():
+    win_rate = performance.calculate_win_rate()
+    return jsonify(win_rate), 200
 
 
 @api.route("/performance", methods=["GET"])

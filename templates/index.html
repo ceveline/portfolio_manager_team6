@@ -239,7 +239,7 @@
               <div class="text-muted small">MARKET VALUE</div>
             </div>
             <div class="h3 mb-2" id="metrics-market-value">-</div>
-            <div class="text-success small" id="metrics-market-gain">-</div>
+            <div class="text-muted small" id="metrics-market-gain">-</div>
           </div>
         </div>
       </div>
@@ -251,7 +251,7 @@
               <div class="text-muted small">UNREALIZED P&L</div>
             </div>
             <div class="h3 mb-2" id="metrics-unrealized-pnl">-</div>
-            <div class="text-success small" id="metrics-unrealized-pct">-</div>
+            <div class="text-muted small" id="metrics-unrealized-pct">-</div>
           </div>
         </div>
       </div>
@@ -274,7 +274,7 @@
             <div class="metric-label">
               <div class="text-muted small">TOTAL RETURN</div>
             </div>
-            <div class="h3 mb-2 text-success" id="metrics-total-return">-</div>
+            <div class="h3 mb-2" id="metrics-total-return">-</div>
             <div class="text-muted small" id="metrics-total-return-amount">-</div>
           </div>
         </div>
@@ -286,8 +286,8 @@
             <div class="metric-label">
               <div class="text-muted small">WIN RATE</div>
             </div>
-            <div class="h3 mb-2"><span id="win-rate-pct">-</span>%</div>
-            <div class="text-muted small"><span id="win-rate-trades">-</span> of <span id="total-trades">-</span> trades</div>
+            <div class="h3 mb-2" id="win-rate-pct">-</div>
+            <div class="text-muted small" id="win-rate-trades">-</div>
           </div>
         </div>
       </div>
@@ -302,6 +302,30 @@
   </header>
 
   <main>
+
+    <section id="dashboard" class="card mb-4">
+      <div class="card-body">
+        <h2 class="card-title mb-3">Top Holdings</h2>
+        <div class="table-responsive">
+          <table class="table table-vcenter table-striped">
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Shares</th>
+                <th>Market Value</th>
+                <th>Unrealized P&L</th>
+                <th>Return %</th>
+              </tr>
+            </thead>
+            <tbody id="top-holdings-body">
+              <tr class="empty-state">
+                <td colspan="5">No portfolio data yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
 
     <section id="buy" class="card mb-4 d-none">
   <div class="card-body">
@@ -409,79 +433,7 @@
 
 <section id="holdings" class="card mb-4">
   <div class="card-body">
-
-    <div class="portfolio-header">
-
-        <div>
-            <h2 class="card-title mb-0">Portfolio</h2>
-        </div>
-
-        <button id="refresh-data-btn" type="button" class="btn refresh-btn">
-            <i class="ti ti-settings"></i>
-            <span>Refresh Settings</span>
-        </button>
-
-    </div>
-
-
-<div id="refresh-options-panel" class="row g-3 mt-3 d-none">
-
-    <div class="col-md-3">
-        <label class="form-label">Refresh Duration</label>
-
-        <select id="refresh-filter-action" class="form-select">
-            <option value="60000">1 minute</option>
-            <option value="120000">2 minutes</option>
-            <option value="180000">3 minutes</option>
-        </select>
-    </div>
-
-    <div class="col-12">
-        <button id="apply-refresh-btn" 
-                type="button" 
-                class="btn btn-primary">
-            Apply
-        </button>
-    </div>
-
-</div>
-
-    
-    <div id="portfolio-stats" class="row row-cards mb-4">
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="text-muted">Total Cost Basis</div>
-            <div id="portfolio-cost-basis" class="h3 mb-0">$0.00</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="text-muted">Market Value</div>
-            <div id="portfolio-market-value" class="h3 mb-0">$0.00</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="text-muted">Unrealized P&L</div>
-            <div id="portfolio-unrealized-pnl" class="h3 mb-0">$0.00</div>
-          </div>
-        </div>
-      </div>
-      <div class="col-md-3">
-        <div class="card">
-          <div class="card-body">
-            <div class="text-muted">Total Return %</div>
-            <div id="portfolio-total-return" class="h3 mb-0">0.00%</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
+    <h2 class="card-title mb-3">Holdings</h2>
     <div class="table-responsive">
       <table id="consolidated-table" class="table table-vcenter table-striped">
         <thead>
@@ -493,27 +445,15 @@
             <th class="sortable" data-sort="cost_basis">Cost Basis <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="market_value">Market Value <span class="sort-indicator"></span></th>
             <th class="sortable" data-sort="unrealized_pnl">Unrealized P&L <span class="sort-indicator"></span></th>
-            <th class="sortable" data-sort="realized_pnl">Realized P&L <span class="sort-indicator"></span></th>
           </tr>
         </thead>
         <tbody id="consolidated-body">
             <tr class="empty-state">
-              <td colspan="8">No portfolio data yet.</td>
+              <td colspan="7">No portfolio data yet.</td>
             </tr>
         </tbody>
       </table>
     </div>
-    <div class="row mt-4">
-  <div class="col-md-6">
-    <h5>Portfolio Allocation</h5>
-    <canvas id="portfolio-pie-chart"></canvas>
-  </div>
-
-  <div class="col-md-6">
-    <h5>Total P&L by Holding</h5>
-    <canvas id="pnl-bar-chart"></canvas>
-  </div>
-</div>
   </div>
 </section>
 
@@ -732,5 +672,74 @@
   
 
   </div>
+
+  <!-- Ticker Info Modal -->
+  <div id="ticker-modal" class="ticker-modal" style="display: none;">
+    <div class="ticker-modal-content">
+      <div class="ticker-modal-header">
+        <h2 id="modal-ticker" style="margin: 0;">-</h2>
+        <button class="ticker-modal-close" onclick="closeTickerModal()">&times;</button>
+      </div>
+      <div class="ticker-modal-body">
+        <div id="ticker-modal-loading" style="text-align: center; padding: 2rem;">Loading...</div>
+        <div id="ticker-modal-info" style="display: none;">
+          <div class="ticker-info-grid">
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Company Name</div>
+              <div id="modal-name" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Current Price</div>
+              <div id="modal-price" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Sector</div>
+              <div id="modal-sector" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Industry</div>
+              <div id="modal-industry" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">52-Week High</div>
+              <div id="modal-high" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">52-Week Low</div>
+              <div id="modal-low" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Market Cap</div>
+              <div id="modal-market-cap" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">P/E Ratio</div>
+              <div id="modal-pe-ratio" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Dividend Yield</div>
+              <div id="modal-dividend" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Beta</div>
+              <div id="modal-beta" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Avg Volume</div>
+              <div id="modal-volume" class="ticker-info-value">-</div>
+            </div>
+            <div class="ticker-info-item">
+              <div class="ticker-info-label">Website</div>
+              <div id="modal-website" class="ticker-info-value">-</div>
+            </div>
+          </div>
+          <div style="margin-top: 1.5rem; display: flex; justify-content: center;">
+            <button class="btn btn-primary" onclick="buyFromModal()">Buy Stock</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>
