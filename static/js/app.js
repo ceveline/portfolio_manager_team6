@@ -750,32 +750,40 @@ function sortTransactionTable(column) {
 }
 
 function populateSellDropdown(holdings) {
-  const sellSelect = document.getElementById("sell-ticker");
-  sellSelect.innerHTML = '<option value="">Select a stock to sell...</option>';
+  const sellSelect = document.getElementById("sell-stock-options");
 
-  // Consolidate holdings by ticker and store available quantities
+  if (!sellSelect) return;
+
+  sellSelect.innerHTML = "";
+
   const consolidatedMap = {};
-  availableQuantities = {}; // Reset available quantities
+  availableQuantities = {};
 
   holdings.forEach((h) => {
     if (!consolidatedMap[h.ticker]) {
       consolidatedMap[h.ticker] = {
         ticker: h.ticker,
-        totalQuantity: 0,
-        firstId: h.id
+        totalQuantity: 0
       };
     }
+
     consolidatedMap[h.ticker].totalQuantity += Number(h.quantity || 0);
   });
 
-  // Store available quantities and populate dropdown
+
   Object.values(consolidatedMap).forEach((consolidated) => {
+
     availableQuantities[consolidated.ticker] = consolidated.totalQuantity;
+
     const option = document.createElement("option");
-    option.value = consolidated.firstId;
-    option.textContent = `${consolidated.ticker} (${consolidated.totalQuantity} shares)`;
+
+    option.value = consolidated.ticker;
+    option.textContent =
+      `${consolidated.ticker} (${consolidated.totalQuantity} shares)`;
+
     option.dataset.ticker = consolidated.ticker;
     option.dataset.availableQuantity = consolidated.totalQuantity;
+
     sellSelect.appendChild(option);
   });
 }
@@ -804,35 +812,38 @@ function clearSellDetails() {
 }
 
 document.getElementById("sell-ticker").addEventListener("change", async (e) => {
-  const holdingId = e.target.value;
+  const ticker = e.target.value.trim();
 
-  if (!holdingId) {
+  if (!ticker) {
     clearSellDetails();
     document.getElementById("sell-quantity-input").value = "";
     return;
   }
 
-  const selectedOption = e.target.options[e.target.selectedIndex];
-  const ticker = selectedOption.dataset.ticker;
   const totalQuantity = availableQuantities[ticker] || 0;
 
   const sellQuantityEl = document.getElementById("sell-quantity");
-  if (sellQuantityEl) sellQuantityEl.textContent = totalQuantity;
+  if (sellQuantityEl) {
+    sellQuantityEl.textContent = totalQuantity;
+  }
 
   document.getElementById("sell-quantity-input").value = "";
 
-  // Fetch and display current price
   document.getElementById("sell-price").textContent = "Loading...";
+
   try {
     const res = await fetch(`${API_BASE}/price/${encodeURIComponent(ticker)}`);
     const payload = await res.json();
+
     if (res.ok && payload.price) {
-      document.getElementById("sell-price").textContent = `$${payload.price.toFixed(2)}`;
+      document.getElementById("sell-price").textContent =
+        `$${payload.price.toFixed(2)}`;
     } else {
       document.getElementById("sell-price").textContent = "-";
     }
-  } catch (err) {
-    console.error("Error fetching sell price:", err);
+
+  } catch(err) {
+    console.error(err);
     document.getElementById("sell-price").textContent = "-";
   }
 });
@@ -906,8 +917,7 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
 
   const sellTickerEl = document.getElementById("sell-ticker");
   const selectedValue = sellTickerEl.value;
-  const selectedOption = sellTickerEl.options[sellTickerEl.selectedIndex];
-  const ticker = selectedOption?.dataset.ticker;
+  const ticker = sellTickerEl.value;
   let quantityToSell = parseFloat(document.getElementById("sell-quantity-input").value);
   const sellDate = getTodayDate();
 
