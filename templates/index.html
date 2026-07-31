@@ -344,17 +344,17 @@
 
       <div class="col-md-4">
         <label class="form-label">Stock</label>
-        <select id="ticker" class="form-select" required>
-          <option value="">Select a ticker...</option>
-          <option value="AAPL">AAPL - Apple</option>
-          <option value="GOOGL">GOOGL - Google</option>
-          <option value="MSFT">MSFT - Microsoft</option>
-          <option value="TSLA">TSLA - Tesla</option>
-          <option value="META">META - Meta</option>
-          <option value="AMZN">AMZN - Amazon</option>
-          <option value="NVDA">NVDA - NVIDIA</option>
-          <option value="SPY">SPY - S&P 500 ETF</option>
-        </select>
+        <input class="form-control" type="text" id="ticker" list="stock-options" placeholder="Type to filter...">
+          <datalist id="stock-options">
+            <option value="AAPL">Apple Inc.</option>
+            <option value="AMZN">Amazon.com Inc.</option>
+            <option value="GOOGL">Google Inc.</option>
+            <option value="META">Meta Platforms Inc.</option>
+            <option value="MSFT">Microsoft Corporation</option>
+            <option value="NVDA">NVIDIA</option>
+            <option value="SPY">S&P 500 ETF</option>
+            <option value="TSLA">Tesla</option>
+          </datalist>
       </div>
 
       <div class="col-md-3">
