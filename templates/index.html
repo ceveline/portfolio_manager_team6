@@ -233,7 +233,7 @@
 
       <div class="col-md-4">
         <label class="form-label">Stock</label>
-        <input class="form-control" type="text" id="ticker" list="stock-options" placeholder="Type to filter...">
+        <input class="form-control" type="text" id="ticker" list="stock-options" placeholder="Type to filter..." required>
           <datalist id="stock-options">
             <option value="AAPL">Apple Inc.</option>
             <option value="AMZN">Amazon.com Inc.</option>
@@ -288,8 +288,8 @@
 
       <div class="col-md-4">
         <label class="form-label">Stock</label>
-        <select id="sell-ticker" class="form-select" required>
-          <option value="">Select a stock to sell...</option>
+        <input class="form-control" type="text" id="sell-ticker" list="sell-stock-options" placeholder="Type to filter..." required>          <datalist id="sell-stock-options"></datalist>
+          <!-- <option value="">Select a stock to sell...</option> -->
         </select>
       </div>
 
