@@ -248,7 +248,7 @@ def create_holding():
         ticker=ticker_upper,
         quantity=quantity,
         price=purchase_price,
-        **({"transaction_date": purchase_date} if purchase_date else {}),
+transaction_date=purchase_date or datetime.now(),
     )
     db.session.add(transaction)
     db.session.commit()
