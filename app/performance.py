@@ -195,7 +195,7 @@ def portfolio_value_series(start_date, end_date, tickers=None):
         for ticker in tickers:
             shares = 0.0
             for tx in tx_by_ticker.get(ticker, []):
-                if tx.transaction_date > end_date:
+                if tx.transaction_date.date() > end_date:
                     break
                 if tx.action == "buy":
                     shares += tx.quantity

@@ -106,7 +106,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">COST BASIS</div>
+              <div class="text-muted small">COST BASIS <span class="metric-info" data-tooltip="Total amount invested in all purchases">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-cost-basis">-</div>
             <div class="text-muted small">Total invested</div>
@@ -118,7 +118,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">MARKET VALUE</div>
+              <div class="text-muted small">MARKET VALUE <span class="metric-info" data-tooltip="Current value of all holdings">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-market-value">-</div>
             <div class="text-muted small" id="metrics-market-gain">-</div>
@@ -130,7 +130,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">UNREALIZED P&L</div>
+              <div class="text-muted small">UNREALIZED P&L <span class="metric-info" data-tooltip="Profit/loss on positions still held">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-unrealized-pnl">-</div>
             <div class="text-muted small" id="metrics-unrealized-pct">-</div>
@@ -142,7 +142,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">REALIZED P&L</div>
+              <div class="text-muted small">REALIZED P&L <span class="metric-info" data-tooltip="Profit/loss from trades that were closed">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-realized-pnl">-</div>
             <div class="text-muted small">From closed trades</div>
@@ -154,7 +154,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">TOTAL RETURN</div>
+              <div class="text-muted small">TOTAL RETURN <span class="metric-info" data-tooltip="Overall percentage gain or loss on your portfolio">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-total-return">-</div>
             <div class="text-muted small" id="metrics-total-return-amount">-</div>
@@ -166,7 +166,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">WIN RATE</div>
+              <div class="text-muted small">WIN RATE <span class="metric-info" data-tooltip="Percentage of closed trades that were profitable">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="win-rate-pct">-</div>
             <div class="text-muted small" id="win-rate-trades">-</div>
@@ -231,7 +231,7 @@
 <div id="buy-error-message" class="error-message d-none"></div>
     <form id="holding-form" class="row g-3">
 
-      <div class="col-md-4">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Stock</label>
         <input class="form-control" type="text" id="ticker" list="stock-options" placeholder="Type to filter..." required>
           <datalist id="stock-options">
@@ -246,20 +246,20 @@
           </datalist>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Quantity</label>
         <input
           type="number"
           id="quantity"
           class="form-control"
-          placeholder="Quantity"
+          placeholder="Quantity to buy"
           step="1"
           min="1"
           required
         />
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Current Price</label>
         <div id="buy-details" class="form-control bg-light">
           <div id="buy-price-display">
@@ -268,7 +268,14 @@
         </div>
       </div>
 
-      <div class="col-md-2 d-flex align-items-end">
+      <div class="col-md flex-grow-1">
+        <label class="form-label">Total</label>
+        <div class="form-control bg-light">
+          <strong id="buy-total">$0.00</strong>
+        </div>
+      </div>
+
+      <div class="col-md-auto d-flex align-items-end">
         <button id="buy-btn" class="btn btn-success w-100" type="submit">
           Buy
         </button>
@@ -286,14 +293,14 @@
 <div id="sell-error-message" class="error-message d-none"></div>
     <form id="sell-form" class="row g-3">
 
-      <div class="col-md-4">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Stock</label>
         <input class="form-control" type="text" id="sell-ticker" list="sell-stock-options" placeholder="Type to filter..." required>          <datalist id="sell-stock-options"></datalist>
           <!-- <option value="">Select a stock to sell...</option> -->
         </select>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Quantity</label>
         <input
           type="number"
@@ -306,21 +313,23 @@
         />
       </div>
 
-      <div class="col-md-3">
-        <label class="form-label">Details</label>
+      <div class="col-md flex-grow-1">
+        <label class="form-label">Current Price</label>
         <div id="sell-details" class="form-control bg-light">
-          <div id="sell-quantity-display">
-            Available:
-            <strong id="sell-quantity">-</strong>
-          </div>
           <div id="sell-price-display">
-            Current Price:
             <strong id="sell-price">-</strong>
           </div>
         </div>
       </div>
 
-      <div class="col-md-2 d-flex align-items-end">
+      <div class="col-md flex-grow-1">
+        <label class="form-label">Total</label>
+        <div class="form-control bg-light">
+          <strong id="sell-total">$0.00</strong>
+        </div>
+      </div>
+
+      <div class="col-md-auto d-flex align-items-end">
         <button id="sell-btn" class="btn btn-danger w-100" type="submit">
           Sell
         </button>
@@ -362,7 +371,6 @@
 
     <div class="mb-4">
       <div class="btn-group mb-3" role="group">
-        <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="1d">1D</button>
         <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="1m">1M</button>
         <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="3m">3M</button>
         <button type="button" class="btn btn-outline-primary perf-period-btn" data-period="6m">6M</button>
@@ -562,17 +570,73 @@
 
         <h2>Settings</h2>
 
-        <p><strong>Theme:</strong> Light Mode</p>
-        <p><strong>Currency:</strong> USD</p>
-        <p><strong>Notifications:</strong> Enabled</p>
+        <div class="mb-3">
+          <label for="theme-select"><strong>Theme:</strong></label>
+          <select id="theme-select" class="form-select">
+            <option value="light" selected>Light Mode</option>
+          </select>
+        </div>
 
-        <button class="btn btn-primary">
+        <div class="mb-3">
+          <label for="currency-select"><strong>Currency:</strong></label>
+          <select id="currency-select" class="form-select">
+            <option value="usd" selected>USD</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="notifications-select"><strong>Notifications:</strong></label>
+          <select id="notifications-select" class="form-select">
+            <option value="enabled" selected>Enabled</option>
+          </select>
+        </div>
+
+        <hr>
+
+        <div class="mb-3">
+          <label><strong>Auto Refresh Interval:</strong></label>
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="setAutoRefreshInterval(60000)">
+              1m
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="setAutoRefreshInterval(180000)">
+              3m
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="setAutoRefreshInterval(300000)">
+              5m
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="stopAutoRefresh()">
+              Off
+            </button>
+          </div>
+          <p class="text-muted small mt-2" id="refresh-status">Auto refresh: Off</p>
+        </div>
+
+        <hr>
+
+        <div class="mb-3">
+          <label><strong>Metrics Info Icons</strong></label>
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="metrics-icons-on" onclick="setMetricsIconsState(true)">
+              On
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="metrics-icons-off" onclick="setMetricsIconsState(false)">
+              Off
+            </button>
+          </div>
+          <p class="text-muted small mt-2">Show info icons (ⓘ) on performance metrics</p>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettings()">
             Save Settings
         </button>
 
     </div>
 
   </div>
+
+  <!-- Toast Message Container -->
+  <div id="toast-message" class="toast-message" style="display: none;"></div>
 
   <div id="support-modal" class="profile-modal">
 
@@ -585,10 +649,6 @@
         <p><strong>Need Help?</strong> Contact our support team</p>
         <p>Email: support@portfoliomanager.com</p>
         <p>Phone: 1-800-PORTFOLIO</p>
-
-        <button class="btn btn-primary">
-            Submit Ticket
-        </button>
 
     </div>
   

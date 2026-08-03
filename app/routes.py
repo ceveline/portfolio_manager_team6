@@ -285,6 +285,17 @@ def create_holding():
     )
     db.session.add(holding)
 
+    # Check if user has sufficient balance
+    cost = quantity * purchase_price
+    user = User.query.first()  # Get default user
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    if user.account_balance < cost:
+        return jsonify({
+            "error": f"Insufficient balance. Required: ${cost:.2f}, Available: ${user.account_balance:.2f}"
+        }), 400
+
     transaction = Transaction(
         action="buy",
         ticker=ticker_upper,
@@ -293,6 +304,10 @@ def create_holding():
         **({"transaction_date": purchase_date} if purchase_date else {}),
     )
     db.session.add(transaction)
+
+    # Update user account balance (deduct purchase cost)
+    user.account_balance -= cost
+
     db.session.commit()
 
     return jsonify(holding.to_dict()), 201
@@ -338,6 +353,13 @@ def delete_holding(holding_id):
         holding.quantity -= quantity_to_sell
         if holding.quantity <= 0:
             db.session.delete(holding)
+
+        # Update user account balance (add sale proceeds)
+        proceeds = quantity_to_sell * holding.purchase_price
+        user = User.query.first()
+        if user:
+            user.account_balance += proceeds
+
         db.session.commit()
     else:
         transaction = Transaction(
@@ -348,6 +370,13 @@ def delete_holding(holding_id):
             **({"transaction_date": sell_date} if sell_date else {}),
         )
         db.session.add(transaction)
+
+        # Update user account balance (add sale proceeds)
+        proceeds = holding.quantity * holding.purchase_price
+        user = User.query.first()
+        if user:
+            user.account_balance += proceeds
+
         db.session.delete(holding)
         db.session.commit()
 

@@ -359,6 +359,7 @@ async function fetchAndDisplayPrice(ticker) {
 
     if (Number.isFinite(priceValue)) {
       priceDisplay.textContent = `$${priceValue.toFixed(2)}`;
+      updateBuyTotal();
       return priceValue;
     }
 
@@ -441,12 +442,13 @@ async function loadPortfolioWithSummary(history = []) {
 
       if (metricsCostBasisEl) metricsCostBasisEl.textContent = formatNumber(summary.total_cost_basis, "currency");
       if (metricsMarketValueEl) metricsMarketValueEl.textContent = formatNumber(summary.total_market_value, "currency");
-      if (metricsMarketGainEl) metricsMarketGainEl.textContent = `↑ ${formatNumber(summary.total_unrealized_pnl, "currency")}\n(${summary.positions.length} holdings)`;
+      if (metricsMarketGainEl) metricsMarketGainEl.textContent = formatNumber(summary.total_unrealized_pnl, "currency");
       if (metricsUnrealizedPnlEl) metricsUnrealizedPnlEl.textContent = formatNumber(summary.total_unrealized_pnl, "currency");
       if (metricsUnrealizedPctEl) metricsUnrealizedPctEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
       if (metricsRealizedPnlEl) metricsRealizedPnlEl.textContent = formatNumber(summary.total_realized_pnl, "currency");
       if (metricsTotalReturnEl) metricsTotalReturnEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
-      if (metricsTotalReturnAmountEl) metricsTotalReturnAmountEl.textContent = `↑ ${formatNumber(summary.total_unrealized_pnl + summary.total_realized_pnl, "currency")}`;
+      if (metricsTotalReturnAmountEl) metricsTotalReturnAmountEl.textContent = formatNumber(summary.total_unrealized_pnl + summary.total_realized_pnl, "currency");
+      applyMetricsColors();
     } catch (e) {
       console.error("Error updating metrics:", e);
     }
@@ -475,6 +477,9 @@ async function loadPortfolioWithSummary(history = []) {
 
         if (winRatePctEl) winRatePctEl.textContent = `${winRate.win_rate_pct.toFixed(1)}%`;
         if (winRateTradesEl) winRateTradesEl.textContent = `${winRate.winning_trades} of ${winRate.total_trades} trades`;
+        applyMetricsColors();
+      } else {
+        console.error("Win rate endpoint error:", winRateRes.status, winRateRes.statusText);
       }
     } catch (err) {
       console.error("Error loading win rate:", err);
@@ -943,8 +948,10 @@ document.getElementById("sell-ticker").addEventListener("change", async (e) => {
     if (res.ok && payload.price) {
       document.getElementById("sell-price").textContent =
         `$${payload.price.toFixed(2)}`;
+      updateSellTotal();
     } else {
       document.getElementById("sell-price").textContent = "-";
+      updateSellTotal();
     }
 
   } catch(err) {
@@ -1005,8 +1012,11 @@ if (buyMessage) {
       e.target.reset();
       const purchasePriceEl = document.getElementById("purchase_price");
       if (purchasePriceEl) purchasePriceEl.textContent = "-";
+      const buyTotalEl = document.getElementById("buy-total");
+      if (buyTotalEl) buyTotalEl.textContent = "$0.00";
       resetHistoryFilter();
       await loadPortfolio();
+      await loadUsers();
     } catch (err) {
       console.error("Buy failed:", err);
       const errorEl = document.getElementById("buy-error-message");
@@ -1080,8 +1090,11 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   }
 
   e.target.reset();
+  const sellTotalEl = document.getElementById("sell-total");
+  if (sellTotalEl) sellTotalEl.textContent = "$0.00";
   resetHistoryFilter();
-  loadPortfolio();
+  await loadPortfolio();
+  await loadUsers();
 });
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -1629,7 +1642,44 @@ function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (modal) {
         modal.style.display = "block";
+        if (modalId === "settings-modal") {
+            restoreMetricsIconsState();
+        }
     }
+}
+
+function setMetricsIconsState(visible) {
+  const icons = document.querySelectorAll(".metric-info");
+  icons.forEach(icon => {
+    icon.style.display = visible ? "inline-flex" : "none";
+  });
+
+  localStorage.setItem("metricsIconsVisible", visible ? "true" : "false");
+  updateMetricsIconsButtons(visible);
+}
+
+function updateMetricsIconsButtons(visible) {
+  const onBtn = document.getElementById("metrics-icons-on");
+  const offBtn = document.getElementById("metrics-icons-off");
+
+  if (onBtn && offBtn) {
+    if (visible) {
+      onBtn.classList.add("btn-primary");
+      onBtn.classList.remove("btn-outline-primary");
+      offBtn.classList.add("btn-outline-secondary");
+      offBtn.classList.remove("btn-secondary");
+    } else {
+      onBtn.classList.add("btn-outline-primary");
+      onBtn.classList.remove("btn-primary");
+      offBtn.classList.add("btn-secondary");
+      offBtn.classList.remove("btn-outline-secondary");
+    }
+  }
+}
+
+function restoreMetricsIconsState() {
+  const isVisible = localStorage.getItem("metricsIconsVisible") !== "false";
+  setMetricsIconsState(isVisible);
 }
 
 function closeModal(modalId) {
@@ -1693,6 +1743,8 @@ document.addEventListener("DOMContentLoaded", () => {
             editProfileBtn.style.display = "none";
             saveProfileBtn.style.display = "inline-block";
 
+            showToastMessage("✏️ Edit mode enabled");
+
             document.getElementById("first-name-value").focus();
 
         });
@@ -1749,14 +1801,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 editProfileBtn.style.display = "inline-block";
                 saveProfileBtn.style.display = "none";
 
-                alert("Profile updated successfully!");
+                showToastMessage("✓ Profile updated successfully!");
 
             }
             catch (err) {
 
                 console.error(err);
 
-                alert(err.message);
+                showToastMessage("✗ Error: " + err.message);
 
             }
 
@@ -1783,6 +1835,8 @@ document.addEventListener("DOMContentLoaded", () => {
     if (dashboardSection) {
         dashboardSection.classList.remove('d-none');
     }
+
+    restoreMetricsIconsState();
 
 });
 
@@ -1836,4 +1890,187 @@ if (applyRefreshButton) {
       .classList.add("d-none");
   });
 }
+
+// Update buy total when quantity or price changes
+function updateBuyTotal() {
+  const quantityInput = document.getElementById("quantity");
+  const priceDisplay = document.getElementById("purchase_price");
+  const buyTotalEl = document.getElementById("buy-total");
+
+  if (quantityInput && priceDisplay && buyTotalEl) {
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const priceText = priceDisplay.textContent.replace(/[$,]/g, "");
+    const price = parseFloat(priceText) || 0;
+    const total = quantity * price;
+
+    buyTotalEl.textContent = `$${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+}
+
+// Update sell total when quantity or price changes
+function updateSellTotal() {
+  const quantityInput = document.getElementById("sell-quantity-input");
+  const priceDisplay = document.getElementById("sell-price");
+  const sellTotalEl = document.getElementById("sell-total");
+
+  if (quantityInput && priceDisplay && sellTotalEl) {
+    const quantity = parseFloat(quantityInput.value) || 0;
+    const priceText = priceDisplay.textContent.replace(/[$,]/g, "");
+    const price = parseFloat(priceText) || 0;
+    const total = quantity * price;
+
+    sellTotalEl.textContent = `$${total.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+}
+
+// Add event listeners for buy form
+const buyQuantityInput = document.getElementById("quantity");
+if (buyQuantityInput) {
+  buyQuantityInput.addEventListener("input", updateBuyTotal);
+}
+
+// Add event listeners for sell form
+const sellQuantityInput = document.getElementById("sell-quantity-input");
+if (sellQuantityInput) {
+  sellQuantityInput.addEventListener("input", updateSellTotal);
+}
+
+// Auto refresh interval management
+function setAutoRefreshInterval(milliseconds) {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+  }
+
+  refreshInterval = milliseconds;
+  startAutoRefresh();
+
+  const minutes = milliseconds / 60000;
+  const statusEl = document.getElementById("refresh-status");
+  if (statusEl) {
+    statusEl.textContent = `Auto refresh: Every ${minutes}m`;
+  }
+
+  console.log(`Auto refresh set to ${minutes} minute(s)`);
+}
+
+function stopAutoRefresh() {
+  if (refreshTimer) {
+    clearInterval(refreshTimer);
+    refreshTimer = null;
+  }
+
+  refreshInterval = 0;
+
+  const statusEl = document.getElementById("refresh-status");
+  if (statusEl) {
+    statusEl.textContent = "Auto refresh: Off";
+  }
+
+  console.log("Auto refresh stopped");
+}
+
+function showToastMessage(message) {
+  const toastEl = document.getElementById("toast-message");
+  if (toastEl) {
+    toastEl.textContent = message;
+    toastEl.style.display = "block";
+
+    setTimeout(() => {
+      toastEl.style.display = "none";
+    }, 3000);
+  }
+}
+
+function saveSettings() {
+  const theme = document.getElementById("theme-select")?.value || "light";
+  const currency = document.getElementById("currency-select")?.value || "usd";
+  const notifications = document.getElementById("notifications-select")?.value || "enabled";
+
+  // Store settings in localStorage
+  localStorage.setItem("appTheme", theme);
+  localStorage.setItem("appCurrency", currency);
+  localStorage.setItem("appNotifications", notifications);
+  localStorage.setItem("appRefreshInterval", refreshInterval);
+
+  console.log("Settings saved:", { theme, currency, notifications, refreshInterval });
+
+  // Show toast confirmation
+  showToastMessage("✓ Settings saved!");
+
+  closeModal("settings-modal");
+}
+
+// Apply color coding to performance metrics
+function applyMetricsColors() {
+  // Realized P&L color
+  const realizedEl = document.getElementById("metrics-realized-pnl");
+  if (realizedEl) {
+    const text = realizedEl.textContent.replace(/[$,]/g, "");
+    const value = parseFloat(text);
+    if (value < 0) {
+      realizedEl.style.color = "#dc2626"; // Red for loss
+    } else if (value > 0) {
+      realizedEl.style.color = "#16a34a"; // Green for gain
+    } else {
+      realizedEl.style.color = "inherit"; // Default color for zero
+    }
+  }
+
+  // Unrealized P&L color
+  const unrealizedEl = document.getElementById("metrics-unrealized-pnl");
+  if (unrealizedEl) {
+    const text = unrealizedEl.textContent.replace(/[$,]/g, "");
+    const value = parseFloat(text);
+    if (value < 0) {
+      unrealizedEl.style.color = "#dc2626"; // Red for loss
+    } else if (value > 0) {
+      unrealizedEl.style.color = "#16a34a"; // Green for gain
+    } else {
+      unrealizedEl.style.color = "inherit"; // Default color for zero
+    }
+  }
+
+  // Unrealized % color
+  const unrealizedPctEl = document.getElementById("metrics-unrealized-pct");
+  if (unrealizedPctEl) {
+    const text = unrealizedPctEl.textContent.replace(/[%+]/g, "");
+    const value = parseFloat(text);
+    if (value < 0) {
+      unrealizedPctEl.style.color = "#dc2626"; // Red
+    } else if (value > 0) {
+      unrealizedPctEl.style.color = "#16a34a"; // Green
+    } else {
+      unrealizedPctEl.style.color = "inherit";
+    }
+  }
+
+  // Total Return % color
+  const totalReturnEl = document.getElementById("metrics-total-return");
+  if (totalReturnEl) {
+    const text = totalReturnEl.textContent.replace(/[%+]/g, "");
+    const value = parseFloat(text);
+    if (value < 0) {
+      totalReturnEl.style.color = "#dc2626"; // Red
+    } else if (value > 0) {
+      totalReturnEl.style.color = "#16a34a"; // Green
+    } else {
+      totalReturnEl.style.color = "inherit";
+    }
+  }
+
+  // Win Rate % color
+  const winRateEl = document.getElementById("win-rate-pct");
+  if (winRateEl) {
+    const text = winRateEl.textContent.replace(/[%]/g, "");
+    const value = parseFloat(text);
+    if (value < 50) {
+      winRateEl.style.color = "#dc2626"; // Red for below 50%
+    } else if (value >= 50) {
+      winRateEl.style.color = "#16a34a"; // Green for 50% or above
+    } else {
+      winRateEl.style.color = "inherit";
+    }
+  }
+}
+
 
