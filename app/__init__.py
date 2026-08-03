@@ -2,11 +2,16 @@ import os
 
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
+try:
+    from flask_migrate import Migrate
+except ImportError:
+    Migrate = None
+
 from flasgger import Swagger
 
 db = SQLAlchemy()
-migrate = Migrate()
+# If flask_migrate is available, create a Migrate instance; otherwise keep None
+migrate = Migrate() if Migrate is not None else None
 
 
 def create_app(config_object="app.config.Config"):
@@ -16,7 +21,8 @@ def create_app(config_object="app.config.Config"):
     os.makedirs(os.path.join(app.root_path, "..", "instance"), exist_ok=True)
 
     db.init_app(app)
-    migrate.init_app(app, db)
+    if migrate is not None:
+        migrate.init_app(app, db)
 
     Swagger(app)
 
