@@ -15,6 +15,15 @@ def create_app(config_object="app.config.Config"):
 
     os.makedirs(os.path.join(app.root_path, "..", "instance"), exist_ok=True)
 
+    # Ensure there's a default database URI so Flask-SQLAlchemy can initialize.
+    # The config object may set SQLALCHEMY_DATABASE_URI to None (from env); if so,
+    # override with a filesystem sqlite DB so init_app doesn't fail. Tests can still
+    # override with an in-memory database after calling create_app.
+    if not app.config.get("SQLALCHEMY_DATABASE_URI"):
+        app.config["SQLALCHEMY_DATABASE_URI"] = (
+            f"sqlite:///{os.path.join(app.root_path, '..', 'instance', 'portfolio.db')}"
+        )
+
     db.init_app(app)
     migrate.init_app(app, db)
 
