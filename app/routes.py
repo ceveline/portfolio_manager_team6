@@ -394,20 +394,34 @@ def delete_holding(holding_id):
 def get_consolidated():
     from sqlalchemy import func
 
-    consolidated = db.session.query(
-        Holding.ticker,
-        func.sum(Holding.quantity).label("total_quantity"),
-        func.avg(Holding.purchase_price).label("avg_price"),
-    ).group_by(Holding.ticker).all()
+    # Compute quantity-weighted average price per ticker: sum(qty * price) / sum(qty)
+    total_qty = func.sum(Holding.quantity).label("total_quantity")
+    total_cost = func.sum(Holding.quantity * Holding.purchase_price).label("total_cost")
+
+    consolidated = (
+        db.session.query(
+            Holding.ticker,
+            total_qty,
+            (total_cost / total_qty).label("avg_price"),
+        )
+        .group_by(Holding.ticker)
+        .all()
+    )
 
     return jsonify([
         {
             "ticker": row[0],
-            "quantity": float(row[1]),
-            "avg_price": float(row[2]) if row[2] else 0,
+            "quantity": float(row[1]) if row[1] is not None else 0.0,
+            "avg_price": float(row[2]) if row[2] is not None else 0.0,
         }
         for row in consolidated
     ]), 200
+
+
+# Alias /api/portfolio to the consolidated endpoint (used by tests and UI)
+@api.route("/portfolio", methods=["GET"])
+def get_portfolio():
+    return get_consolidated()
 
 
 @api.route("/transactions", methods=["GET"])
