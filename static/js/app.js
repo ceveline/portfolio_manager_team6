@@ -3,6 +3,7 @@ let holdingsData = [];
 let usersData = [];
 let portfolioPieChart = null;
 let performanceChart = null;
+let dashboardPerformanceChart = null;
 let pnlBarChart = null;
 let portfolioData = [];
 let currentSortColumn = "ticker"; // Default sort by ticker
@@ -19,6 +20,37 @@ let refreshTimer = null;
 let refreshPanel = null;
 let refreshing = false;
 let tickerInfoCache = {}; // Cache for ticker info to avoid repeated API calls
+let hoveredX = null;
+
+const verticalLinePlugin = {
+  id: "verticalLine",
+  afterDatasetsDraw(chart) {
+    if (hoveredX !== null) {
+      const ctx = chart.ctx;
+      const yTop = chart.chartArea.top;
+      const yBottom = chart.chartArea.bottom;
+
+      ctx.save();
+      ctx.strokeStyle = "#206bc4";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(hoveredX, yTop);
+      ctx.lineTo(hoveredX, yBottom);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+};
+
+function getDefaultPerformanceDates() {
+  const today = new Date();
+  const endDate = new Date(today);
+  const startDate = new Date(today);
+  startDate.setDate(startDate.getDate() - 90);
+
+  const formatDate = (date) => date.toISOString().split("T")[0];
+  return { start: formatDate(startDate), end: formatDate(endDate) };
+}
 
 function switchTab(tabName, e) {
   if (e) e.preventDefault();
@@ -38,10 +70,19 @@ function switchTab(tabName, e) {
     section.classList.add('d-none');
   });
 
-  const targetSection = document.getElementById(tabName);
-  if (targetSection) {
-    targetSection.classList.remove('d-none');
+  if (tabName === 'dashboard') {
+    // Show both dashboard performance and top holdings for dashboard tab
+    const dashboardPerf = document.getElementById('dashboard-performance');
+    const dashboardTop = document.getElementById('dashboard');
+    if (dashboardPerf) dashboardPerf.classList.remove('d-none');
+    if (dashboardTop) dashboardTop.classList.remove('d-none');
+  } else {
+    const targetSection = document.getElementById(tabName);
+    if (targetSection) {
+      targetSection.classList.remove('d-none');
+    }
   }
+
 }
 
 async function loadUsers() {
@@ -83,7 +124,7 @@ function openTickerModal(ticker) {
   const modalLoading = document.getElementById("ticker-modal-loading");
   const modalInfo = document.getElementById("ticker-modal-info");
 
-  modal.style.display = "flex";
+  modal.classList.add("open");
   modalLoading.style.display = "block";
   modalInfo.style.display = "none";
 
@@ -94,7 +135,7 @@ function openTickerModal(ticker) {
 
 function closeTickerModal() {
   const modal = document.getElementById("ticker-modal");
-  modal.style.display = "none";
+  modal.classList.remove("open");
 }
 
 function buyFromModal() {
@@ -153,24 +194,24 @@ async function fetchTickerInfo(ticker) {
 function formatNumber(value, type = "number") {
   if (value === null || value === undefined) return "-";
 
+  const num = parseFloat(value);
+
   if (type === "currency") {
-    return `$${parseFloat(value).toFixed(2)}`;
+    return `$${num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   } else if (type === "percent") {
-    return `${(parseFloat(value) * 100).toFixed(2)}%`;
+    return `${((num * 100).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }))}%`;
   } else if (type === "marketCap") {
-    const num = parseFloat(value);
-    if (num >= 1e12) return `$${(num / 1e12).toFixed(2)}T`;
-    if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
-    if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
-    return `$${num.toFixed(0)}`;
+    if (num >= 1e12) return `$${(num / 1e12).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}T`;
+    if (num >= 1e9) return `$${(num / 1e9).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}B`;
+    if (num >= 1e6) return `$${(num / 1e6).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}M`;
+    return `$${num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
   } else if (type === "volume") {
-    const num = parseFloat(value);
-    if (num >= 1e6) return `${(num / 1e6).toFixed(1)}M`;
-    if (num >= 1e3) return `${(num / 1e3).toFixed(1)}K`;
-    return num.toFixed(0);
+    if (num >= 1e6) return `${(num / 1e6).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`;
+    if (num >= 1e3) return `${(num / 1e3).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}K`;
+    return num.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
 
-  return parseFloat(value).toFixed(2);
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 function displayTickerInfo(data) {
@@ -225,7 +266,7 @@ async function loadPortfolio(filters = {}) {
   const historyRes = await fetch(historyUrl);
   const history = await historyRes.json();
 
-  await loadPortfolioWithSummary();
+  await loadPortfolioWithSummary(history);
   loadHistory(history, filters);
   populateSellDropdown(holdings);
   clearSellDetails();
@@ -329,7 +370,7 @@ async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
   return response.json();
 }
 
-async function loadPortfolioWithSummary() {
+async function loadPortfolioWithSummary(history = []) {
   try {
     const res = await fetch(`${API_BASE}/summary`);
     if (!res.ok) throw new Error("Failed to load summary");
@@ -376,14 +417,14 @@ async function loadPortfolioWithSummary() {
       const metricsTotalReturnEl = document.querySelector("#metrics-total-return");
       const metricsTotalReturnAmountEl = document.querySelector("#metrics-total-return-amount");
 
-      if (metricsCostBasisEl) metricsCostBasisEl.textContent = `$${summary.total_cost_basis.toFixed(2)}`;
-      if (metricsMarketValueEl) metricsMarketValueEl.textContent = `$${summary.total_market_value.toFixed(2)}`;
-      if (metricsMarketGainEl) metricsMarketGainEl.textContent = `↑ $${summary.total_unrealized_pnl.toFixed(2)}\n(${summary.positions.length} holdings)`;
-      if (metricsUnrealizedPnlEl) metricsUnrealizedPnlEl.textContent = `$${summary.total_unrealized_pnl.toFixed(2)}`;
+      if (metricsCostBasisEl) metricsCostBasisEl.textContent = formatNumber(summary.total_cost_basis, "currency");
+      if (metricsMarketValueEl) metricsMarketValueEl.textContent = formatNumber(summary.total_market_value, "currency");
+      if (metricsMarketGainEl) metricsMarketGainEl.textContent = `↑ ${formatNumber(summary.total_unrealized_pnl, "currency")}\n(${summary.positions.length} holdings)`;
+      if (metricsUnrealizedPnlEl) metricsUnrealizedPnlEl.textContent = formatNumber(summary.total_unrealized_pnl, "currency");
       if (metricsUnrealizedPctEl) metricsUnrealizedPctEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
-      if (metricsRealizedPnlEl) metricsRealizedPnlEl.textContent = `$${summary.total_realized_pnl.toFixed(2)}`;
+      if (metricsRealizedPnlEl) metricsRealizedPnlEl.textContent = formatNumber(summary.total_realized_pnl, "currency");
       if (metricsTotalReturnEl) metricsTotalReturnEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
-      if (metricsTotalReturnAmountEl) metricsTotalReturnAmountEl.textContent = `↑ $${(summary.total_unrealized_pnl + summary.total_realized_pnl).toFixed(2)}`;
+      if (metricsTotalReturnAmountEl) metricsTotalReturnAmountEl.textContent = `↑ ${formatNumber(summary.total_unrealized_pnl + summary.total_realized_pnl, "currency")}`;
     } catch (e) {
       console.error("Error updating metrics:", e);
     }
@@ -416,6 +457,19 @@ async function loadPortfolioWithSummary() {
     } catch (err) {
       console.error("Error loading win rate:", err);
     }
+
+    // Load dashboard performance chart - from first transaction date to today
+    let startDate = getDefaultPerformanceDates().start; // Default to 90 days
+
+    if (history && history.length > 0) {
+      // Find the earliest transaction date
+      const dates = history.map(t => new Date(t.transaction_date || t.date));
+      const earliestDate = new Date(Math.min(...dates));
+      startDate = earliestDate.toISOString().split("T")[0];
+    }
+
+    const endDate = new Date().toISOString().split("T")[0];
+    await loadDashboardPerformanceChart(startDate, endDate);
   } catch (err) {
     console.error("Error loading portfolio summary:", err);
   }
@@ -427,16 +481,16 @@ function renderPortfolioTable(positions) {
 
   positions.forEach((pos) => {
     const row = document.createElement("tr");
-    const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
-    const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
-    const currentPriceStr = pos.current_price !== null ? `$${pos.current_price.toFixed(2)}` : "-";
+    const unrealizedPnlStr = pos.unrealized_pnl !== null ? formatNumber(pos.unrealized_pnl, "currency") : "-";
+    const marketValueStr = pos.market_value !== null ? formatNumber(pos.market_value, "currency") : "-";
+    const currentPriceStr = pos.current_price !== null ? formatNumber(pos.current_price, "currency") : "-";
 
     row.innerHTML = `
       <td><span class="ticker" onclick="openTickerModal('${pos.ticker}')">${pos.ticker}</span></td>
       <td>${pos.shares_held}</td>
-      <td>$${pos.avg_cost.toFixed(2)}</td>
+      <td>${formatNumber(pos.avg_cost, "currency")}</td>
       <td>${currentPriceStr}</td>
-      <td>$${pos.cost_basis.toFixed(2)}</td>
+      <td>${formatNumber(pos.cost_basis, "currency")}</td>
       <td>${marketValueStr}</td>
       <td>${unrealizedPnlStr}</td>
     `;
@@ -462,8 +516,8 @@ function renderTopHoldings(positions) {
 
   top5.forEach((pos) => {
     const row = document.createElement("tr");
-    const marketValueStr = pos.market_value !== null ? `$${pos.market_value.toFixed(2)}` : "-";
-    const unrealizedPnlStr = pos.unrealized_pnl !== null ? `$${pos.unrealized_pnl.toFixed(2)}` : "-";
+    const marketValueStr = pos.market_value !== null ? formatNumber(pos.market_value, "currency") : "-";
+    const unrealizedPnlStr = pos.unrealized_pnl !== null ? formatNumber(pos.unrealized_pnl, "currency") : "-";
 
     let returnPctStr = "-";
     if (pos.cost_basis && pos.cost_basis > 0) {
@@ -533,16 +587,17 @@ function renderPortfolioPieChart(positions) {
 
   const labels = positions.map(pos => pos.ticker);
   const values = positions.map(pos => pos.market_value !== null ? pos.market_value : 0);
+  const totalValue = values.reduce((a, b) => a + b, 0);
 
   const colors = [
-    "#4e79a7",
-    "#f28e2b",
-    "#e15759",
-    "#76b7b2",
-    "#59a14f",
-    "#edc948",
-    "#b07aa1",
-    "#ff9da7"
+    "#206bc4",
+    "#0f172a",
+    "#64748b",
+    "#16a34a",
+    "#dc2626",
+    "#f59e0b",
+    "#8b5cf6",
+    "#0891b2"
   ];
 
   if (portfolioPieChart) {
@@ -551,6 +606,52 @@ function renderPortfolioPieChart(positions) {
     portfolioPieChart.update();
     return;
   }
+
+  const centerTextPlugin = {
+    id: "centerText",
+    beforeDatasetsDraw(chart) {
+      const { width, height, ctx } = chart;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      ctx.save();
+      ctx.font = "bold 18px Inter, Arial, sans-serif";
+      ctx.fillStyle = "#0f172a";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      ctx.fillText("Total Value", centerX, centerY - 15);
+
+      ctx.font = "bold 24px Inter, Arial, sans-serif";
+      ctx.fillText(`$${(totalValue / 1000).toFixed(1)}K`, centerX, centerY + 15);
+
+      ctx.restore();
+    }
+  };
+
+  const labelPlugin = {
+    id: "labels",
+    afterDatasetsDraw(chart) {
+      const { data, ctx } = chart;
+      const centerX = chart.chartArea.left + chart.chartArea.width / 2;
+      const centerY = chart.chartArea.top + chart.chartArea.height / 2;
+      const radius = Math.min(chart.chartArea.width, chart.chartArea.height) / 2;
+
+      chart.getDatasetMeta(0).data.forEach((datapoint, index) => {
+        const { x, y } = datapoint.tooltipPosition();
+        const label = labels[index];
+
+        ctx.save();
+        ctx.font = "bold 12px Inter, Arial, sans-serif";
+        ctx.fillStyle = "#ffffff";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+
+        ctx.fillText(label, x, y);
+        ctx.restore();
+      });
+    }
+  };
 
   portfolioPieChart = new Chart(canvas, {
     type: "doughnut",
@@ -567,10 +668,14 @@ function renderPortfolioPieChart(positions) {
     options: {
       responsive: true,
       maintainAspectRatio: true,
-      aspectRatio: 1
-    }
-
-    
+      aspectRatio: 1,
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    },
+    plugins: [centerTextPlugin, labelPlugin]
   });
 }
 
@@ -650,8 +755,8 @@ function renderTransactionTable(transactions) {
       <td>${t.action}</td>
       <td><span class="ticker" onclick="openTickerModal('${t.ticker}')">${t.ticker}</span></td>
       <td>${t.quantity}</td>
-      <td>$${t.price.toFixed(2)}</td>
-      <td>$${t.totalValue.toFixed(2)}</td>
+      <td>${formatNumber(t.price, "currency")}</td>
+      <td>${formatNumber(t.totalValue, "currency")}</td>
       <td>${t.transaction_date}</td>
     `;
     tbody.appendChild(row);
@@ -1067,29 +1172,6 @@ async function loadPerformanceChart(startDate, endDate) {
       return;
     }
 
-    let hoveredX = null;
-
-    const verticalLinePlugin = {
-      id: "verticalLine",
-      afterDatasetsDraw(chart) {
-        if (hoveredX !== null) {
-          const ctx = chart.ctx;
-          const yTop = chart.chartArea.top;
-          const yBottom = chart.chartArea.bottom;
-
-          ctx.save();
-          ctx.strokeStyle = "#4e79a7";
-          ctx.lineWidth = 2;
-          ctx.setLineDash([5, 5]);
-          ctx.beginPath();
-          ctx.moveTo(hoveredX, yTop);
-          ctx.lineTo(hoveredX, yBottom);
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
-    };
-
     canvas.addEventListener("mousemove", (e) => {
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -1111,6 +1193,9 @@ async function loadPerformanceChart(startDate, endDate) {
       performanceChart.draw();
     });
 
+    const maxValue = Math.max(...values);
+    const roundedMax = Math.ceil(maxValue / 10000) * 10000;
+
     performanceChart = new Chart(canvas, {
       type: "line",
       data: {
@@ -1119,12 +1204,12 @@ async function loadPerformanceChart(startDate, endDate) {
           {
             label: "Portfolio Value",
             data: values,
-            borderColor: "#4e79a7",
-            backgroundColor: "rgba(78, 121, 167, 0.1)",
+            borderColor: "#206bc4",
+            backgroundColor: "rgba(32, 107, 196, 0.1)",
             borderWidth: 2,
             fill: true,
             pointRadius: 0,
-            pointBackgroundColor: "#4e79a7",
+            pointBackgroundColor: "#206bc4",
             pointBorderColor: "#fff",
             pointBorderWidth: 2,
             pointHoverRadius: 6,
@@ -1135,14 +1220,14 @@ async function loadPerformanceChart(startDate, endDate) {
       options: {
         responsive: true,
         maintainAspectRatio: true,
+        aspectRatio: 5,
         interaction: {
           mode: "index",
           intersect: false
         },
         plugins: {
           legend: {
-            display: true,
-            position: "top"
+            display: false
           },
           tooltip: {
             enabled: true,
@@ -1150,18 +1235,37 @@ async function loadPerformanceChart(startDate, endDate) {
             padding: 12,
             titleFont: { size: 14, weight: "bold" },
             bodyFont: { size: 13 },
-            borderColor: "#4e79a7",
+            borderColor: "#206bc4",
             borderWidth: 1,
             callbacks: {
-              label: (context) => `Portfolio Value: $${context.parsed.y.toFixed(2)}`
+              label: (context) => `$${context.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
             }
           }
         },
         scales: {
+          x: {
+            display: true,
+            ticks: {
+              maxTicksLimit: 6,
+              maxRotation: 0,
+              minRotation: 0
+            },
+            grid: {
+              display: false
+            }
+          },
           y: {
             beginAtZero: true,
             ticks: {
-              callback: (value) => `$${value.toFixed(0)}`
+              maxTicksLimit: 5,
+              callback: (value) => {
+                if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+                if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+                return `$${value.toFixed(0)}`;
+              }
+            },
+            grid: {
+              display: false
             }
           }
         }
@@ -1173,39 +1277,210 @@ async function loadPerformanceChart(startDate, endDate) {
   }
 }
 
-function setDefaultPerformanceDates() {
-  const endDateInput = document.getElementById("perf-end-date");
-  const startDateInput = document.getElementById("perf-start-date");
+async function loadDashboardPerformanceChart(startDate, endDate) {
+  try {
+    const params = new URLSearchParams();
+    if (startDate) params.append("start", startDate);
+    if (endDate) params.append("end", endDate);
 
-  const today = new Date();
-  const endDate = new Date(today);
-  const startDate = new Date(today);
-  startDate.setDate(startDate.getDate() - 90);
+    const url = `${API_BASE}/performance${params.toString() ? `?${params.toString()}` : ""}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("Failed to load performance");
+    const data = await res.json();
 
-  const formatDate = (date) => date.toISOString().split("T")[0];
+    const canvas = document.getElementById("dashboard-performance-chart");
 
-  if (endDateInput) endDateInput.value = formatDate(endDate);
-  if (startDateInput) startDateInput.value = formatDate(startDate);
+    if (!canvas || typeof Chart === "undefined") {
+      console.warn("Dashboard chart canvas or Chart library not available");
+      return;
+    }
+
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      console.warn("No performance data available");
+      return;
+    }
+
+    const dates = data.map(d => d.date);
+    const values = data.map(d => d.value);
+
+    if (dashboardPerformanceChart) {
+      dashboardPerformanceChart.destroy();
+    }
+
+    dashboardPerformanceChart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: dates,
+        datasets: [{
+          label: "Portfolio Value",
+          data: values,
+          borderColor: "#206bc4",
+          backgroundColor: "rgba(32, 107, 196, 0.1)",
+          borderWidth: 2,
+          fill: true,
+          pointRadius: 0,
+          pointBackgroundColor: "#206bc4",
+          pointBorderColor: "#fff",
+          pointBorderWidth: 2,
+          pointHoverRadius: 6,
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        aspectRatio: 3,
+        interaction: {
+          mode: "index",
+          intersect: false
+        },
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            enabled: true,
+            backgroundColor: "rgba(0, 0, 0, 0.8)",
+            padding: 12,
+            titleFont: { size: 14, weight: "bold" },
+            bodyFont: { size: 13 },
+            borderColor: "#206bc4",
+            borderWidth: 1,
+            callbacks: {
+              label: (context) => `$${context.parsed.y.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            display: true,
+            ticks: {
+              maxTicksLimit: 6,
+              maxRotation: 0,
+              minRotation: 0
+            },
+            grid: {
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            ticks: {
+              maxTicksLimit: 5,
+              callback: (value) => {
+                if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+                if (value >= 1000) return `$${(value / 1000).toFixed(0)}K`;
+                return `$${value.toFixed(0)}`;
+              }
+            },
+            grid: {
+              display: false
+            }
+          }
+        }
+      },
+      plugins: [verticalLinePlugin]
+    });
+
+
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (
+        x >= dashboardPerformanceChart.chartArea.left &&
+        x <= dashboardPerformanceChart.chartArea.right &&
+        y >= dashboardPerformanceChart.chartArea.top &&
+        y <= dashboardPerformanceChart.chartArea.bottom
+      ) {
+        hoveredX = x;
+        dashboardPerformanceChart.draw();
+      }
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      hoveredX = null;
+      dashboardPerformanceChart.draw();
+    });
+  } catch (err) {
+    console.error("Error loading dashboard performance chart:", err);
+  }
 }
 
-const perfLoadBtn = document.getElementById("perf-load-btn");
-if (perfLoadBtn) {
-  perfLoadBtn.addEventListener("click", async () => {
-    const startDate = document.getElementById("perf-start-date").value;
-    const endDate = document.getElementById("perf-end-date").value;
-    await loadPerformanceChart(startDate, endDate);
-  });
-}
 
 document.querySelectorAll(".perf-period-btn").forEach(btn => {
   btn.addEventListener("click", async (e) => {
     const period = e.target.dataset.period;
     const { start, end } = getDateRangeForPeriod(period);
-    document.getElementById("perf-start-date").value = start;
-    document.getElementById("perf-end-date").value = end;
     await loadPerformanceChart(start, end);
   });
 });
+
+async function updateMetricsForDate(dateStr) {
+  try {
+    const response = await fetch(`${API_BASE}/summary-as-of?date=${dateStr}`);
+    if (!response.ok) throw new Error("Failed to fetch metrics");
+
+    const summary = await response.json();
+    updateMetricsDisplay(summary);
+  } catch (err) {
+    console.error("Error fetching metrics for date:", err);
+  }
+}
+
+function updateMetricsDisplay(summary) {
+  // Update cost basis
+  const costBasisEl = document.getElementById("metrics-cost-basis");
+  if (costBasisEl) {
+    costBasisEl.textContent = `$${summary.total_cost_basis.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  // Update market value
+  const marketValueEl = document.getElementById("metrics-market-value");
+  if (marketValueEl) {
+    marketValueEl.textContent = `$${summary.total_market_value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+
+  // Update unrealized P&L
+  const unrealizedEl = document.getElementById("metrics-unrealized-pnl");
+  if (unrealizedEl) {
+    const value = summary.total_unrealized_pnl;
+    const color = value < 0 ? "#dc2626" : "#16a34a";
+    unrealizedEl.textContent = `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    unrealizedEl.style.color = color;
+  }
+
+  // Update realized P&L
+  const realizedEl = document.getElementById("metrics-realized-pnl");
+  if (realizedEl) {
+    const value = summary.total_realized_pnl;
+    const color = value < 0 ? "#dc2626" : "#16a34a";
+    realizedEl.textContent = `$${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    realizedEl.style.color = color;
+  }
+
+  // Update total return
+  const returnEl = document.getElementById("metrics-total-return");
+  if (returnEl) {
+    const value = summary.total_return_pct;
+    const color = value < 0 ? "#dc2626" : "#16a34a";
+    returnEl.textContent = `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+    returnEl.style.color = color;
+  }
+}
+
+async function updateChartsForDate(dateStr) {
+  try {
+    const response = await fetch(`${API_BASE}/summary-as-of?date=${dateStr}`);
+    if (!response.ok) throw new Error("Failed to fetch charts data");
+
+    const summary = await response.json();
+    renderPnLBarChart(summary.positions);
+  } catch (err) {
+    console.error("Error updating charts for date:", err);
+  }
+}
 
 // Add sortable header click handlers
 document.querySelectorAll("th.sortable").forEach(th => {
@@ -1228,10 +1503,8 @@ window.addEventListener("DOMContentLoaded", () => {
   if (currentDateEl) {
     currentDateEl.textContent = getTodayDate();
   }
-  setDefaultPerformanceDates();
-  const startDate = document.getElementById("perf-start-date").value;
-  const endDate = document.getElementById("perf-end-date").value;
-  loadPerformanceChart(startDate, endDate);
+  const { start, end } = getDefaultPerformanceDates();
+  loadPerformanceChart(start, end);
 
   const prevButton = document.getElementById("history-prev-btn");
   const nextButton = document.getElementById("history-next-btn");
@@ -1272,7 +1545,7 @@ function renderPnLBarChart(positions) {
 );
 
   const colors = values.map(v =>
-    v >= 0 ? "#2ecc71" : "#e74c3c"
+    v >= 0 ? "#16a34a" : "#dc2626"
   );
 
   if (pnlBarChart) {
@@ -1379,14 +1652,18 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Initialize sections - hide all except holdings
+    // Initialize sections - show dashboard by default
     const sections = document.querySelectorAll('main section');
     sections.forEach(section => {
         section.classList.add('d-none');
     });
-    const holdingsSection = document.getElementById('holdings');
-    if (holdingsSection) {
-        holdingsSection.classList.remove('d-none');
+    const dashboardPerfSection = document.getElementById('dashboard-performance');
+    const dashboardSection = document.getElementById('dashboard');
+    if (dashboardPerfSection) {
+        dashboardPerfSection.classList.remove('d-none');
+    }
+    if (dashboardSection) {
+        dashboardSection.classList.remove('d-none');
     }
 
 });
