@@ -1024,6 +1024,7 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   const selectedValue = sellTickerEl.value;
   const ticker = sellTickerEl.value;
   let quantityToSell = parseFloat(document.getElementById("sell-quantity-input").value);
+  const originalQuantityToSell = quantityToSell;  
   const sellDate = getTodayDate();
 
   const errorEl = document.getElementById("sell-error-message");
@@ -1071,8 +1072,8 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
 
   const sellMessage = document.getElementById("sell-success-message");
   if (sellMessage) {
-    sellMessage.textContent = `Successfully sold ${availableQuantity - quantityToSell} shares of ${ticker}`;
-    sellMessage.classList.remove("d-none");
+    sellMessage.textContent =
+    `Successfully sold ${originalQuantityToSell} share${originalQuantityToSell !== 1 ? "s" : ""} of ${ticker}`;    sellMessage.classList.remove("d-none");
     setTimeout(() => {
       sellMessage.classList.add("d-none");
     }, 4000);
