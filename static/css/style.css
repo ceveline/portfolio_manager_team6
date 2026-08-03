@@ -909,14 +909,21 @@ th.sortable.desc .sort-indicator::after {
 
 .balance-label {
     color: #6b7280;
-    font-size: 0.8rem;
+    font-size: 0.7rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: .08em;
 }
 
+.balance-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    margin-right: 2rem;
+}
+
 .balance-amount {
-    margin-top: .35rem;
     color: #16a34a;
     font-size: 2rem;
     font-weight: 700;
