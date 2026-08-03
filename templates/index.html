@@ -7,127 +7,12 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    :root {
-      --color-accent: #0D9488;
-      --color-border: #E5E7EB;
-    }
-
-    body {
-      display: flex;
-      height: 100vh;
-      margin: 0;
-      padding: 0;
-    }
-
-    .sidebar {
-      width: 240px;
-      background: linear-gradient(90deg, #0f172a, #1e293b);
-      border-right: 1px solid var(--color-border);
-      padding: 2rem;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      gap: 2rem;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      font-size: 1.125rem;
-      font-weight: 700;
-      color: white;
-      text-decoration: none;
-      margin-bottom: 1.5rem;
-    }
-
-    .nav-section {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-
-    .nav-section-title {
-      font-size: 0.75rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      color: #94a3b8;
-      margin-bottom: 1rem;
-      padding: 0 1rem;
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 1rem;
-      padding: 1rem;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      color: #cbd5e1;
-      text-decoration: none;
-      font-size: 0.875rem;
-      border: 1px solid transparent;
-    }
-
-    .nav-item:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-      color: white;
-    }
-
-    .nav-item.active {
-      background-color: var(--color-accent);
-      color: white;
-      border-color: var(--color-accent);
-      font-weight: 600;
-    }
-
-    .main-wrapper {
-      flex: 1;
-      overflow-y: auto;
-      display: flex;
-      flex-direction: column;
-      margin: 0;
-      padding: 0;
-    }
-
-    #portfolio-metrics {
-      display: flex;
-      gap: 1rem;
-      justify-content: space-between;
-      flex-wrap: wrap;
-    }
-
-    #portfolio-metrics .col-md-2 {
-      flex: 1 1 calc(16.66% - 1rem);
-      min-width: 0;
-    }
-
-    #portfolio-metrics .card-body {
-      text-align: left;
-    }
-
-    @media (max-width: 1200px) {
-      #portfolio-metrics .col-md-2 {
-        flex: 1 1 calc(16.66% - 1rem);
-      }
-    }
-
-    @media (max-width: 600px) {
-      #portfolio-metrics .col-md-2 {
-        flex: 1 1 100%;
-      }
-    }
-
-  </style>
 </head>
 <body>
   <aside class="sidebar">
-    <a href="#" class="logo">
+    <a href="#" class="logo" class="flex-center gap-md nowrap">
       <i class="ti ti-building-bank"></i>
-      <span>Portfolio Manager</span>
+      <span class="nowrap">Portfolio Manager</span>
     </a>
 
     <nav class="nav-section">
@@ -162,32 +47,21 @@
       </a>
     </nav>
 
-    <nav class="nav-section">
-      <div class="nav-section-title">Discover</div>
-      <a href="#" onclick="switchTab('watchlist', event)" class="nav-item">
-        <i class="ti ti-star"></i>
-        <span>Watchlist</span>
-      </a>
-    </nav>
   </aside>
 
-  <div class="main-wrapper">
-<div class="top-banner">
-  <div class="top-banner-content">
+  <div class="content-wrapper">
+    <div class="top-banner">
+      <div class="top-banner-content">
 
-    <div class="company-logo">
-      <i class="ti ti-building-bank"></i>
-      Portfolio Manager
+        <div class="company-subtitle">
+          Wealth Management Dashboard
+        </div>
+
+      </div>
     </div>
 
-    <div class="company-subtitle">
-      Wealth Management Dashboard
-    </div>
-
-  </div>
-</div>
-
-  <header class="dashboard-header">
+    <div class="main-wrapper">
+      <header class="dashboard-header">
 
   <div class="header-top">
       <div class="header-banner">
@@ -232,7 +106,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">COST BASIS</div>
+              <div class="text-muted small">COST BASIS <span class="metric-info" data-tooltip="Total amount invested in all purchases">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-cost-basis">-</div>
             <div class="text-muted small">Total invested</div>
@@ -244,7 +118,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">MARKET VALUE</div>
+              <div class="text-muted small">MARKET VALUE <span class="metric-info" data-tooltip="Current value of all holdings">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-market-value">-</div>
             <div class="text-muted small" id="metrics-market-gain">-</div>
@@ -256,7 +130,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">UNREALIZED P&L</div>
+              <div class="text-muted small">UNREALIZED P&L <span class="metric-info" data-tooltip="Profit/loss on positions still held">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-unrealized-pnl">-</div>
             <div class="text-muted small" id="metrics-unrealized-pct">-</div>
@@ -268,7 +142,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">REALIZED P&L</div>
+              <div class="text-muted small">REALIZED P&L <span class="metric-info" data-tooltip="Profit/loss from trades that were closed">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-realized-pnl">-</div>
             <div class="text-muted small">From closed trades</div>
@@ -280,7 +154,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">TOTAL RETURN</div>
+              <div class="text-muted small">TOTAL RETURN <span class="metric-info" data-tooltip="Overall percentage gain or loss on your portfolio">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-total-return">-</div>
             <div class="text-muted small" id="metrics-total-return-amount">-</div>
@@ -292,7 +166,7 @@
         <div class="card h-100">
           <div class="card-body d-flex flex-column justify-content-center">
             <div class="metric-label">
-              <div class="text-muted small">WIN RATE</div>
+              <div class="text-muted small">WIN RATE <span class="metric-info" data-tooltip="Percentage of closed trades that were profitable">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="win-rate-pct">-</div>
             <div class="text-muted small" id="win-rate-trades">-</div>
@@ -311,29 +185,44 @@
 
   <main>
 
-    <section id="dashboard" class="card mb-4">
-      <div class="card-body">
-        <h2 class="card-title mb-3">Top Holdings</h2>
-        <div class="table-responsive">
-          <table class="table table-vcenter table-striped">
-            <thead>
-              <tr>
-                <th>Ticker</th>
-                <th>Shares</th>
-                <th>Market Value</th>
-                <th>Unrealized P&L</th>
-                <th>Return %</th>
-              </tr>
-            </thead>
-            <tbody id="top-holdings-body">
-              <tr class="empty-state">
-                <td colspan="5">No portfolio data yet.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+    <div class="row" style="display: flex; gap: 0.5rem; padding-left: 2rem; padding-right: 2rem;">
+      <div class="col-md-6" style="flex: 1; display: flex; margin: 0;">
+        <section id="dashboard-performance" class="card d-none" style="width: 100%; display: flex; flex-direction: column; margin: 0;">
+          <div class="card-body" style="display: flex; flex-direction: column; flex: 1; padding: 1rem;">
+            <h2 class="card-title mb-3">Portfolio Value</h2>
+            <div id="dashboard-performance-chart-container" style="position: relative; width: 100%; flex: 1; min-height: 0;">
+              <canvas id="dashboard-performance-chart"></canvas>
+            </div>
+          </div>
+        </section>
       </div>
-    </section>
+
+      <div class="col-md-6" style="flex: 1; display: flex; margin: 0;">
+        <section id="dashboard" class="card" style="width: 100%; margin: 0;">
+          <div class="card-body" class="flex-col">
+            <h2 class="card-title mb-3">Top Holdings</h2>
+            <div class="table-responsive" class="scrollable">
+              <table id="top-holdings-table" class="table table-vcenter table-striped">
+                <thead>
+                  <tr>
+                    <th>Ticker</th>
+                    <th>Shares</th>
+                    <th>Market Value</th>
+                    <th>Unrealized P&L</th>
+                    <th>Return %</th>
+                  </tr>
+                </thead>
+                <tbody id="top-holdings-body">
+                  <tr class="empty-state">
+                    <td colspan="5">No portfolio data yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
 
     <section id="buy" class="card mb-4 d-none">
   <div class="card-body">
@@ -342,7 +231,7 @@
 <div id="buy-error-message" class="error-message d-none"></div>
     <form id="holding-form" class="row g-3">
 
-      <div class="col-md-4">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Stock</label>
         <input class="form-control" type="text" id="ticker" list="stock-options" placeholder="Type to filter..." required>
           <datalist id="stock-options">
@@ -357,20 +246,20 @@
           </datalist>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Quantity</label>
         <input
           type="number"
           id="quantity"
           class="form-control"
-          placeholder="Quantity"
+          placeholder="Quantity to buy"
           step="1"
           min="1"
           required
         />
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Current Price</label>
         <div id="buy-details" class="form-control bg-light">
           <div id="buy-price-display">
@@ -379,7 +268,14 @@
         </div>
       </div>
 
-      <div class="col-md-2 d-flex align-items-end">
+      <div class="col-md flex-grow-1">
+        <label class="form-label">Total</label>
+        <div class="form-control bg-light">
+          <strong id="buy-total">$0.00</strong>
+        </div>
+      </div>
+
+      <div class="col-md-auto d-flex align-items-end">
         <button id="buy-btn" class="btn btn-success w-100" type="submit">
           Buy
         </button>
@@ -397,14 +293,14 @@
 <div id="sell-error-message" class="error-message d-none"></div>
     <form id="sell-form" class="row g-3">
 
-      <div class="col-md-4">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Stock</label>
         <input class="form-control" type="text" id="sell-ticker" list="sell-stock-options" placeholder="Type to filter..." required>          <datalist id="sell-stock-options"></datalist>
           <!-- <option value="">Select a stock to sell...</option> -->
         </select>
       </div>
 
-      <div class="col-md-3">
+      <div class="col-md flex-grow-1">
         <label class="form-label">Quantity</label>
         <input
           type="number"
@@ -417,21 +313,23 @@
         />
       </div>
 
-      <div class="col-md-3">
-        <label class="form-label">Details</label>
+      <div class="col-md flex-grow-1">
+        <label class="form-label">Current Price</label>
         <div id="sell-details" class="form-control bg-light">
-          <div id="sell-quantity-display">
-            Available:
-            <strong id="sell-quantity">-</strong>
-          </div>
           <div id="sell-price-display">
-            Current Price:
             <strong id="sell-price">-</strong>
           </div>
         </div>
       </div>
 
-      <div class="col-md-2 d-flex align-items-end">
+      <div class="col-md flex-grow-1">
+        <label class="form-label">Total</label>
+        <div class="form-control bg-light">
+          <strong id="sell-total">$0.00</strong>
+        </div>
+      </div>
+
+      <div class="col-md-auto d-flex align-items-end">
         <button id="sell-btn" class="btn btn-danger w-100" type="submit">
           Sell
         </button>
@@ -441,7 +339,7 @@
   </div>
 </section>
 
-<section id="holdings" class="card mb-4">
+<section id="holdings" class="card mb-4 d-none">
   <div class="card-body">
     <h2 class="card-title mb-3">Holdings</h2>
     <div class="table-responsive">
@@ -469,7 +367,7 @@
 
 <section id="performance" class="card mb-4 d-none">
   <div class="card-body">
-    <h2 class="card-title mb-3">Performance Chart</h2>
+    <h2 class="card-title mb-3">Portfolio Value</h2>
 
     <div class="mb-4">
       <div class="btn-group mb-3" role="group">
@@ -484,22 +382,29 @@
       </div>
     </div>
 
-    <div class="row g-3 mb-4">
-      <div class="col-md-3">
-        <label class="form-label">Start Date</label>
-        <input type="date" id="perf-start-date" class="form-control" />
-      </div>
-      <div class="col-md-3">
-        <label class="form-label">End Date</label>
-        <input type="date" id="perf-end-date" class="form-control" />
-      </div>
-      <div class="col-md-6 d-flex align-items-end gap-2">
-        <button id="perf-load-btn" class="btn btn-primary">Load Performance</button>
-      </div>
-    </div>
-
     <div id="performance-chart-container" class="mt-4">
       <canvas id="performance-chart"></canvas>
+    </div>
+
+    <div class="row mt-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Portfolio Allocation</h5>
+            <canvas id="portfolio-pie-chart"></canvas>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Total P&L by Holding</h5>
+            <div id="pnl-chart-container">
+              <canvas id="pnl-bar-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -586,7 +491,7 @@
     </form>
 
     <div class="table-responsive">
-      <table class="table table-vcenter table-striped">
+      <table id="transactions-table" class="table table-vcenter table-striped">
 
         <thead>
           <tr>
@@ -665,17 +570,73 @@
 
         <h2>Settings</h2>
 
-        <p><strong>Theme:</strong> Light Mode</p>
-        <p><strong>Currency:</strong> USD</p>
-        <p><strong>Notifications:</strong> Enabled</p>
+        <div class="mb-3">
+          <label for="theme-select"><strong>Theme:</strong></label>
+          <select id="theme-select" class="form-select">
+            <option value="light" selected>Light Mode</option>
+          </select>
+        </div>
 
-        <button class="btn btn-primary">
+        <div class="mb-3">
+          <label for="currency-select"><strong>Currency:</strong></label>
+          <select id="currency-select" class="form-select">
+            <option value="usd" selected>USD</option>
+          </select>
+        </div>
+
+        <div class="mb-3">
+          <label for="notifications-select"><strong>Notifications:</strong></label>
+          <select id="notifications-select" class="form-select">
+            <option value="enabled" selected>Enabled</option>
+          </select>
+        </div>
+
+        <hr>
+
+        <div class="mb-3">
+          <label><strong>Auto Refresh Interval:</strong></label>
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="setAutoRefreshInterval(60000)">
+              1m
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="setAutoRefreshInterval(180000)">
+              3m
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary" onclick="setAutoRefreshInterval(300000)">
+              5m
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="stopAutoRefresh()">
+              Off
+            </button>
+          </div>
+          <p class="text-muted small mt-2" id="refresh-status">Auto refresh: Off</p>
+        </div>
+
+        <hr>
+
+        <div class="mb-3">
+          <label><strong>Metrics Info Icons</strong></label>
+          <div class="btn-group" role="group">
+            <button type="button" class="btn btn-sm btn-outline-primary" id="metrics-icons-on" onclick="setMetricsIconsState(true)">
+              On
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="metrics-icons-off" onclick="setMetricsIconsState(false)">
+              Off
+            </button>
+          </div>
+          <p class="text-muted small mt-2">Show info icons (ⓘ) on performance metrics</p>
+        </div>
+
+        <button class="btn btn-primary" onclick="saveSettings()">
             Save Settings
         </button>
 
     </div>
 
   </div>
+
+  <!-- Toast Message Container -->
+  <div id="toast-message" class="toast-message" style="display: none;"></div>
 
   <div id="support-modal" class="profile-modal">
 
@@ -689,17 +650,13 @@
         <p>Email: support@portfoliomanager.com</p>
         <p>Phone: 1-800-PORTFOLIO</p>
 
-        <button class="btn btn-primary">
-            Submit Ticket
-        </button>
-
     </div>
   
 
   </div>
 
   <!-- Ticker Info Modal -->
-  <div id="ticker-modal" class="ticker-modal" style="display: none;">
+  <div id="ticker-modal" class="ticker-modal hidden">
     <div class="ticker-modal-content">
       <div class="ticker-modal-header">
         <h2 id="modal-ticker" style="margin: 0;">-</h2>
@@ -707,7 +664,7 @@
       </div>
       <div class="ticker-modal-body">
         <div id="ticker-modal-loading" style="text-align: center; padding: 2rem;">Loading...</div>
-        <div id="ticker-modal-info" style="display: none;">
+        <div id="ticker-modal-info" class="hidden">
           <div class="ticker-info-grid">
             <div class="ticker-info-item">
               <div class="ticker-info-label">Company Name</div>
