@@ -164,7 +164,7 @@ def portfolio_value_series(start_date, end_date, tickers=None):
             # Replay transactions up to current date
             shares = 0.0
             for tx in tx_by_ticker.get(ticker, []):
-                if tx.transaction_date > current:
+                if tx.transaction_date.date() > current:
                     break
                 if tx.action == "buy":
                     shares += tx.quantity
