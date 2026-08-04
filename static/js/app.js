@@ -14,6 +14,7 @@ let sortedHistoryData = []; // Store currently sorted transaction data for pagin
 let currentHistorySortColumn = "transaction_date"; // Default sort by date
 let currentHistorySortDirection = "desc"; // Descending for most recent first
 let historyCurrentPage = 1;
+let currentHistoryFilters = {}; // Preserve history filters across refreshes
 const historyRowsPerPage = 5;
 let refreshInterval = 60000;
 let refreshTimer = null;
@@ -50,6 +51,32 @@ function getDefaultPerformanceDates() {
 
   const formatDate = (date) => date.toISOString().split("T")[0];
   return { start: formatDate(startDate), end: formatDate(endDate) };
+}
+
+function formatTransactionDate(value) {
+  if (!value) return "";
+
+  let dateObj;
+  if (typeof value === "string") {
+    dateObj = new Date(value);
+  } else if (value instanceof Date) {
+    dateObj = value;
+  } else {
+    return String(value);
+  }
+
+  if (Number.isNaN(dateObj.getTime())) {
+    return String(value);
+  }
+
+  return dateObj.toLocaleString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
 function switchTab(tabName, e) {
@@ -274,7 +301,8 @@ window.addEventListener("click", (e) => {
 });
 
 async function loadPortfolio(filters = {}) {
-  
+  currentHistoryFilters = { ...filters };
+
   const holdingsRes = await fetch(`${API_BASE}/holdings`);
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
@@ -378,7 +406,7 @@ async function buyStock(ticker, quantity, purchasePrice, purchaseDate) {
     ticker,
     quantity,
     purchase_price: purchasePrice,
-    purchase_date: purchaseDate || getTodayDate(),
+    ...(purchaseDate ? { purchase_date: purchaseDate } : {}),
   };
 
   const response = await fetch(`${API_BASE}/holdings`, {
@@ -760,7 +788,7 @@ if (filters.totalValue) {
 
   // Apply default sort by date, descending
   historyCurrentPage = 1;
-  sortTransactionTable("transaction_date");
+  sortTransactionTable("transaction_date", "desc");
 }
 
 
@@ -786,7 +814,7 @@ function renderTransactionTable(transactions) {
       <td>${t.quantity}</td>
       <td>${formatNumber(t.price, "currency")}</td>
       <td>${formatNumber(t.totalValue, "currency")}</td>
-      <td>${t.transaction_date}</td>
+      <td>${formatTransactionDate(t.transaction_date)}</td>
     `;
     tbody.appendChild(row);
   });
@@ -814,8 +842,11 @@ function updateHistoryPagination(totalItems) {
   }
 }
 
-function sortTransactionTable(column) {
-  if (currentHistorySortColumn === column) {
+function sortTransactionTable(column, forcedDirection) {
+  if (forcedDirection) {
+    currentHistorySortColumn = column;
+    currentHistorySortDirection = forcedDirection;
+  } else if (currentHistorySortColumn === column) {
     currentHistorySortDirection = currentHistorySortDirection === "asc" ? "desc" : "asc";
   } else {
     currentHistorySortColumn = column;
@@ -979,7 +1010,6 @@ if (holdingForm) {
     const ticker = document.getElementById("ticker")?.value?.trim();
     const quantity = parseFloat(document.getElementById("quantity")?.value || "");
     let purchasePrice = getDisplayedPurchasePrice();
-    const purchaseDate = getTodayDate();
 
     // Validate quantity
     if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isInteger(quantity)) {
@@ -1000,7 +1030,7 @@ if (holdingForm) {
     }
 
     try {
-      await buyStock(ticker, quantity, purchasePrice, purchaseDate);
+      await buyStock(ticker, quantity, purchasePrice);
       const buyMessage = document.getElementById("buy-success-message");
 
 if (buyMessage) {
@@ -1059,8 +1089,7 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   const selectedValue = sellTickerEl.value;
   const ticker = sellTickerEl.value;
   let quantityToSell = parseFloat(document.getElementById("sell-quantity-input").value);
-  const originalQuantityToSell = quantityToSell;  
-  const sellDate = getTodayDate();
+  const originalQuantityToSell = quantityToSell;
 
   const errorEl = document.getElementById("sell-error-message");
 
@@ -1119,7 +1148,6 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
     const url = new URL(`${API_BASE}/holdings/${holding.id}`, window.location.origin);
     url.searchParams.append("quantity", sellQty);
     url.searchParams.append("sell_price", currentPrice);
-    if (sellDate) url.searchParams.append("sell_date", sellDate);
 
     await fetch(url, { method: "DELETE" });
     quantityToSell -= sellQty;
@@ -1895,7 +1923,7 @@ document.addEventListener("DOMContentLoaded", () => {
     refreshing = true;
 
     try {
-      await loadPortfolio();
+      await loadPortfolio(currentHistoryFilters);
     } finally {
       refreshing = false;
     }
