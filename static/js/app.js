@@ -644,6 +644,7 @@ function renderPortfolioPieChart(positions) {
 
   const labels = positions.map(pos => pos.ticker);
   const values = positions.map(pos => pos.market_value !== null ? pos.market_value : 0);
+  const shares = positions.map(pos => pos.shares_held);
   const totalValue = values.reduce((a, b) => a + b, 0);
 
   const colors = [
@@ -727,8 +728,21 @@ function renderPortfolioPieChart(positions) {
       maintainAspectRatio: true,
       aspectRatio: 1,
       plugins: {
+        title: {
+          display: false
+        },
         legend: {
           display: false
+        },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              const index = context.dataIndex;
+              const marketValue = values[index];
+              const shareCount = shares[index];
+              return `Market Value: $${marketValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} | Shares: ${shareCount}`;
+            }
+          }
         }
       }
     },
