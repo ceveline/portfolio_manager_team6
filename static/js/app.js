@@ -126,9 +126,11 @@ async function loadUsers() {
 
       const formattedBalance = Number(user.account_balance).toLocaleString('en-US', {
         style: 'currency',
-        currency: 'USD'
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
       });
-      
+
       balanceEl.textContent = formattedBalance;
     }
 
@@ -1027,6 +1029,29 @@ if (buyMessage) {
   });
 }
 
+// Auto-fetch and display current price when sell ticker is selected
+document.getElementById("sell-ticker").addEventListener("change", async (e) => {
+  const ticker = e.target.value;
+  if (!ticker) {
+    document.getElementById("sell-price").textContent = "-";
+    document.getElementById("sell-total").textContent = "$0.00";
+    return;
+  }
+
+  try {
+    const priceRes = await fetch(`${API_BASE}/price/${ticker}`);
+    if (priceRes.ok) {
+      const priceData = await priceRes.json();
+      document.getElementById("sell-price").textContent = formatNumber(priceData.price, "currency");
+    } else {
+      document.getElementById("sell-price").textContent = "Error loading price";
+    }
+  } catch (err) {
+    console.error("Failed to fetch price:", err);
+    document.getElementById("sell-price").textContent = "Error loading price";
+  }
+});
+
 document.getElementById("sell-form").addEventListener("submit", async (e) => {
   e.preventDefault();
 
@@ -1062,6 +1087,25 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
     return;
   }
 
+  // Fetch current price for the ticker
+  let currentPrice;
+  try {
+    const priceRes = await fetch(`${API_BASE}/price/${ticker}`);
+    if (priceRes.ok) {
+      const priceData = await priceRes.json();
+      currentPrice = priceData.price;
+    }
+  } catch (err) {
+    console.error("Failed to fetch current price:", err);
+  }
+
+  if (!currentPrice) {
+    errorEl.textContent = "Unable to fetch current price for this stock";
+    errorEl.classList.remove("d-none");
+    setTimeout(() => errorEl.classList.add("d-none"), 4000);
+    return;
+  }
+
   // FIFO deletion: delete from holdings in order until quantity is satisfied
   const holdingsToDelete = holdingsData.filter(h => h.ticker === ticker).sort((a, b) => {
     // Sort by purchase date (earliest first for FIFO)
@@ -1074,6 +1118,7 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
     const sellQty = Math.min(quantityToSell, holding.quantity);
     const url = new URL(`${API_BASE}/holdings/${holding.id}`, window.location.origin);
     url.searchParams.append("quantity", sellQty);
+    url.searchParams.append("sell_price", currentPrice);
     if (sellDate) url.searchParams.append("sell_date", sellDate);
 
     await fetch(url, { method: "DELETE" });
@@ -1185,6 +1230,10 @@ function getDateRangeForPeriod(period) {
       start.setFullYear(start.getFullYear() - 10);
       break;
     case "all":
+      if (historyData && historyData.length > 0) {
+        const earliest = new Date(Math.min(...historyData.map(t => new Date(t.transaction_date))));
+        return { start: formatDate(earliest), end: formatDate(end) };
+      }
       start.setFullYear(1900);
       break;
   }

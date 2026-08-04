@@ -51,7 +51,7 @@ def backfill_ticker(ticker, start_date=None, end_date=None):
     inserted, updated = 0, 0
     for idx, row in hist.iterrows():
         price_date = idx.date()
-        close_price = float(row["Close"])
+        close_price = float(row["Close"].item())
 
         existing = PriceHistory.query.filter_by(
             ticker=ticker, price_date=price_date

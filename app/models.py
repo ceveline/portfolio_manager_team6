@@ -11,7 +11,7 @@ class User(db.Model):
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     email = db.Column(db.String(120), nullable=False, unique=True, index=True)
-    account_balance = db.Column(db.Float, nullable=False, default=0.0)
+    account_balance = db.Column(db.Numeric(12, 2), nullable=False, default=0.0)
 
     def to_dict(self):
         return {

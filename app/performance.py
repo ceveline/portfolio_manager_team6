@@ -288,15 +288,15 @@ def portfolio_summary(current_prices):
     consolidated = db.session.query(
         Holding.ticker,
         func.sum(Holding.quantity).label("total_quantity"),
-        func.avg(Holding.purchase_price).label("avg_price"),
     ).group_by(Holding.ticker).all()
 
-    for ticker, total_quantity, avg_price in consolidated:
+    for ticker, total_quantity in consolidated:
         if total_quantity <= 0:
             continue
 
-        # Get realized P&L from transactions
+        # Get avg cost and realized P&L from transaction history (source of truth)
         pos = replay_position(ticker)
+        avg_price = pos["avg_cost"]
         realized_pnl = pos["realized_pnl"]
         total_realized_pnl += realized_pnl
 
