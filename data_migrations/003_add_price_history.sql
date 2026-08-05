@@ -2,7 +2,7 @@
 -- 6 months of daily closing prices (2026-02-04 to 2026-08-04)
 -- Real data from yfinance: AAPL, AMZN, GOOGL, META, MSFT, NVDA, SPY, TSLA
 
-INSERT INTO price_history (ticker, price_date, close_price) VALUES
+INSERT IGNORE INTO price_history (ticker, price_date, close_price) VALUES
 ('AAPL', '2026-02-04', 275.977),
 ('AAPL', '2026-02-05', 275.398),
 ('AAPL', '2026-02-06', 277.604),
