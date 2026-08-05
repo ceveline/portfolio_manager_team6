@@ -2038,7 +2038,11 @@ function setAutoRefreshInterval(milliseconds) {
   const minutes = milliseconds / 60000;
   const statusEl = document.getElementById("refresh-status");
   if (statusEl) {
-    statusEl.textContent = `Auto refresh: Every ${minutes}m`;
+    if (milliseconds === 1800000) {
+      statusEl.textContent = `Auto refresh: Off`;
+    } else {
+      statusEl.textContent = `Auto refresh: Every ${minutes}m`;
+    }
   }
 
   console.log(`Auto refresh set to ${minutes} minute(s)`);
