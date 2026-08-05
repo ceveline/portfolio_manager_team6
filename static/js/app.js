@@ -110,6 +110,30 @@ function switchTab(tabName, e) {
     }
   }
 
+  // Clear buy form when switching to buy tab
+  if (tabName === 'buy') {
+    const tickerInput = document.getElementById("ticker");
+    if (tickerInput) tickerInput.value = "";
+    const purchasePriceEl = document.getElementById("purchase_price");
+    if (purchasePriceEl) purchasePriceEl.textContent = "-";
+    const buyTotalEl = document.getElementById("buy-total");
+    if (buyTotalEl) buyTotalEl.textContent = "$0.00";
+  }
+
+  // Clear sell form when switching to sell tab
+  if (tabName === 'sell') {
+    const sellTickerEl = document.getElementById("sell-ticker");
+    if (sellTickerEl) sellTickerEl.value = "";
+    const sellQuantityEl = document.getElementById("sell-quantity");
+    if (sellQuantityEl) sellQuantityEl.textContent = "-";
+    const sellPriceEl = document.getElementById("sell-price");
+    if (sellPriceEl) sellPriceEl.textContent = "-";
+    const sellTotalEl = document.getElementById("sell-total");
+    if (sellTotalEl) sellTotalEl.textContent = "$0.00";
+    const sellQuantityInputEl = document.getElementById("sell-quantity-input");
+    if (sellQuantityInputEl) sellQuantityInputEl.value = "";
+  }
+
 }
 
 async function loadUsers() {
@@ -300,10 +324,24 @@ window.addEventListener("click", (e) => {
   }
 });
 
+async function refreshAllUI() {
+  // Comprehensive refresh after buy/sell
+  await loadPortfolio();
+  await loadUsers();
+
+  // Update both line charts (Dashboard and Performance tabs)
+  const today = new Date().toISOString().split("T")[0];
+  const { start } = getDefaultPerformanceDates();
+
+  // Always update both charts
+  await loadDashboardPerformanceChart(start, today);
+  await loadPerformanceChart(start, today);
+}
+
 async function loadPortfolio(filters = {}) {
   currentHistoryFilters = { ...filters };
 
-  const holdingsRes = await fetch(`${API_BASE}/holdings`);
+  const holdingsRes = await fetch(`${API_BASE}/holdings?t=${Date.now()}`);
   const holdings = await holdingsRes.json();
   holdingsData = holdings;
 
@@ -314,14 +352,90 @@ async function loadPortfolio(filters = {}) {
     }
   });
 
-  const historyUrl = `${API_BASE}/transactions${params.toString() ? `?${params.toString()}` : ""}`;
+  const historyUrl = `${API_BASE}/transactions${params.toString() ? `?${params.toString()}&` : "?"}t=${Date.now()}`;
   const historyRes = await fetch(historyUrl);
   const history = await historyRes.json();
+
+  // Fetch win rate independently
+  try {
+    const winRateResponse = await fetch(`${API_BASE}/win-rate`);
+    if (winRateResponse.ok) {
+      const winRateData = await winRateResponse.json();
+      const winRatePctEl = document.querySelector("#win-rate-pct");
+      const winRateTradesEl = document.querySelector("#win-rate-trades");
+
+      if (winRatePctEl) {
+        const pctValue = isNaN(winRateData.win_rate_pct) ? 0 : winRateData.win_rate_pct;
+        winRatePctEl.textContent = `${pctValue.toFixed(1)}%`;
+      }
+      if (winRateTradesEl) {
+        winRateTradesEl.textContent = `${winRateData.winning_trades} of ${winRateData.total_trades} trades`;
+      }
+    }
+  } catch (error) {
+    console.error("Failed to fetch win rate:", error);
+  }
 
   await loadPortfolioWithSummary(history);
   loadHistory(history, filters);
   populateSellDropdown(holdings);
   clearSellDetails();
+}
+
+function calculateWinRate(history) {
+  if (!history || !Array.isArray(history) || history.length === 0) {
+    return { winRatePct: 0, winningTrades: 0, totalTrades: 0 };
+  }
+
+  const tickerData = {};
+
+  // Group transactions by ticker
+  history.forEach(transaction => {
+    if (!transaction || !transaction.ticker || !transaction.action) return;
+
+    const ticker = transaction.ticker;
+    if (!tickerData[ticker]) {
+      tickerData[ticker] = { buys: [], sells: [] };
+    }
+
+    const action = String(transaction.action).toLowerCase().trim();
+    if (action === 'buy') {
+      tickerData[ticker].buys.push(transaction);
+    } else if (action === 'sell') {
+      tickerData[ticker].sells.push(transaction);
+    }
+  });
+
+  let winningTrades = 0;
+  let totalTrades = 0;
+
+  // Calculate win rate for each ticker
+  Object.keys(tickerData).forEach(ticker => {
+    const { buys, sells } = tickerData[ticker];
+
+    if (sells.length === 0) return;
+
+    // Calculate average buy price
+    const totalBuyValue = buys.reduce((sum, buy) => sum + ((buy.quantity || 0) * (buy.price || 0)), 0);
+    const totalBuyQuantity = buys.reduce((sum, buy) => sum + (buy.quantity || 0), 0);
+    const avgBuyPrice = totalBuyQuantity > 0 ? totalBuyValue / totalBuyQuantity : 0;
+
+    // Check each sell against average buy price
+    sells.forEach(sell => {
+      totalTrades++;
+      if ((sell.price || 0) > avgBuyPrice) {
+        winningTrades++;
+      }
+    });
+  });
+
+  const winRatePct = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0;
+
+  return {
+    winRatePct,
+    winningTrades,
+    totalTrades
+  };
 }
 
 function getTodayDate() {
@@ -467,18 +581,50 @@ async function loadPortfolioWithSummary(history = []) {
       const metricsUnrealizedPnlEl = document.querySelector("#metrics-unrealized-pnl");
       const metricsUnrealizedPctEl = document.querySelector("#metrics-unrealized-pct");
       const metricsRealizedPnlEl = document.querySelector("#metrics-realized-pnl");
+      const metricsRealizedPctEl = document.querySelector("#metrics-realized-pct");
       const metricsTotalReturnEl = document.querySelector("#metrics-total-return");
       const metricsTotalReturnAmountEl = document.querySelector("#metrics-total-return-amount");
 
       if (metricsCostBasisEl) metricsCostBasisEl.textContent = formatNumber(summary.total_cost_basis, "currency");
-      if (metricsMarketValueEl) metricsMarketValueEl.textContent = formatNumber(summary.total_market_value, "currency");
-      if (metricsMarketGainEl) metricsMarketGainEl.textContent = formatNumber(summary.total_unrealized_pnl, "currency");
+      if (metricsMarketValueEl) {
+        metricsMarketValueEl.textContent = formatNumber(summary.total_market_value, "currency");
+        const marketGain = summary.total_market_value - summary.total_cost_basis;
+        metricsMarketValueEl.style.color = marketGain >= 0 ? "#16a34a" : "#dc2626";
+      }
+      if (metricsMarketGainEl) {
+        const marketChangePercent = summary.total_cost_basis > 0
+          ? ((summary.total_unrealized_pnl / summary.total_cost_basis) * 100).toFixed(2)
+          : 0;
+        const sign = marketChangePercent >= 0 ? "+" : "";
+        metricsMarketGainEl.textContent = `${sign}${marketChangePercent}%`;
+      }
       if (metricsUnrealizedPnlEl) metricsUnrealizedPnlEl.textContent = formatNumber(summary.total_unrealized_pnl, "currency");
-      if (metricsUnrealizedPctEl) metricsUnrealizedPctEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
+      if (metricsUnrealizedPctEl) {
+        const unrealizedPctValue = summary.total_cost_basis > 0
+          ? ((summary.total_unrealized_pnl / summary.total_cost_basis) * 100).toFixed(2)
+          : 0;
+        const sign = unrealizedPctValue >= 0 ? "+" : "";
+        metricsUnrealizedPctEl.textContent = `${sign}${unrealizedPctValue}%`;
+      }
       if (metricsRealizedPnlEl) metricsRealizedPnlEl.textContent = formatNumber(summary.total_realized_pnl, "currency");
-      if (metricsTotalReturnEl) metricsTotalReturnEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(1)}%`;
-      if (metricsTotalReturnAmountEl) metricsTotalReturnAmountEl.textContent = formatNumber(summary.total_unrealized_pnl + summary.total_realized_pnl, "currency");
+      if (metricsRealizedPctEl) {
+        const realizedPctValue = summary.total_cost_basis > 0
+          ? ((summary.total_realized_pnl / summary.total_cost_basis) * 100).toFixed(2)
+          : 0;
+        const sign = realizedPctValue >= 0 ? "+" : "";
+        metricsRealizedPctEl.textContent = `${sign}${realizedPctValue}%`;
+      }
+      if (metricsTotalReturnAmountEl) {
+        const totalAmount = summary.total_unrealized_pnl + summary.total_realized_pnl;
+        metricsTotalReturnAmountEl.textContent = formatNumber(totalAmount, "currency");
+        metricsTotalReturnAmountEl.style.color = totalAmount >= 0 ? "#16a34a" : "#dc2626";
+      }
+      if (metricsTotalReturnEl) {
+        metricsTotalReturnEl.textContent = `${summary.total_return_pct >= 0 ? "+" : ""}${summary.total_return_pct.toFixed(2)}%`;
+        metricsTotalReturnEl.style.color = summary.total_return_pct >= 0 ? "#16a34a" : "#dc2626";
+      }
       applyMetricsColors();
+      applyMetricCardBorders(summary);
     } catch (e) {
       console.error("Error updating metrics:", e);
     }
@@ -497,23 +643,8 @@ async function loadPortfolioWithSummary(history = []) {
     renderPortfolioPieChart(summary.positions);
     renderPnLBarChart(summary.positions);
 
-    // Fetch and display win rate
-    try {
-      const winRateRes = await fetch(`${API_BASE}/win-rate`);
-      if (winRateRes.ok) {
-        const winRate = await winRateRes.json();
-        const winRatePctEl = document.querySelector("#win-rate-pct");
-        const winRateTradesEl = document.querySelector("#win-rate-trades");
-
-        if (winRatePctEl) winRatePctEl.textContent = `${winRate.win_rate_pct.toFixed(1)}%`;
-        if (winRateTradesEl) winRateTradesEl.textContent = `${winRate.winning_trades} of ${winRate.total_trades} trades`;
-        applyMetricsColors();
-      } else {
-        console.error("Win rate endpoint error:", winRateRes.status, winRateRes.statusText);
-      }
-    } catch (err) {
-      console.error("Error loading win rate:", err);
-    }
+    applyMetricsColors();
+    applyMetricCardBorders(summary);
 
     // Load dashboard performance chart - from first transaction date to today
     let startDate = getDefaultPerformanceDates().start; // Default to 90 days
@@ -537,6 +668,8 @@ function renderPortfolioTable(positions) {
   tbody.innerHTML = "";
 
   positions.forEach((pos) => {
+    if (pos.shares_held <= 0) return;
+
     const row = document.createElement("tr");
     const unrealizedPnlStr = pos.unrealized_pnl !== null ? formatNumber(pos.unrealized_pnl, "currency") : "-";
     const marketValueStr = pos.market_value !== null ? formatNumber(pos.market_value, "currency") : "-";
@@ -561,8 +694,9 @@ function renderTopHoldings(positions) {
 
   tbody.innerHTML = "";
 
-  // Sort by market value and get top 5
+  // Filter out positions with 0 shares, sort by market value and get top 5
   const top5 = positions
+    .filter(pos => pos.shares_held > 0)
     .sort((a, b) => (b.market_value || 0) - (a.market_value || 0))
     .slice(0, 5);
 
@@ -642,9 +776,16 @@ function renderPortfolioPieChart(positions) {
     return;
   }
 
-  const labels = positions.map(pos => pos.ticker);
-  const values = positions.map(pos => pos.market_value !== null ? pos.market_value : 0);
-  const shares = positions.map(pos => pos.shares_held);
+  // Filter out positions with 0 shares
+  const activePositions = positions.filter(pos => pos.shares_held > 0);
+
+  if (activePositions.length === 0) {
+    return;
+  }
+
+  const labels = activePositions.map(pos => pos.ticker);
+  const values = activePositions.map(pos => pos.market_value !== null ? pos.market_value : 0);
+  const shares = activePositions.map(pos => pos.shares_held);
   const totalValue = values.reduce((a, b) => a + b, 0);
 
   const colors = [
@@ -659,8 +800,11 @@ function renderPortfolioPieChart(positions) {
   ];
 
   if (portfolioPieChart) {
+    const newTotalValue = values.reduce((a, b) => a + b, 0);
     portfolioPieChart.data.labels = labels;
     portfolioPieChart.data.datasets[0].data = values;
+    shares = activePositions.map(pos => pos.shares_held);
+    totalValue = newTotalValue;
     portfolioPieChart.update();
     return;
   }
@@ -1056,8 +1200,7 @@ if (buyMessage) {
       const buyTotalEl = document.getElementById("buy-total");
       if (buyTotalEl) buyTotalEl.textContent = "$0.00";
       resetHistoryFilter();
-      await loadPortfolio();
-      await loadUsers();
+      await refreshAllUI();
     } catch (err) {
       console.error("Buy failed:", err);
       const errorEl = document.getElementById("buy-error-message");
@@ -1180,8 +1323,7 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
   const sellTotalEl = document.getElementById("sell-total");
   if (sellTotalEl) sellTotalEl.textContent = "$0.00";
   resetHistoryFilter();
-  await loadPortfolio();
-  await loadUsers();
+  await refreshAllUI();
 });
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -1294,8 +1436,27 @@ async function loadPerformanceChart(startDate, endDate) {
     if (!res.ok) throw new Error("Failed to load performance");
     const data = await res.json();
 
-    const dates = data.map(d => d.date);
-    const values = data.map(d => d.value);
+    let dates = data.map(d => d.date);
+    let values = data.map(d => d.value);
+
+    // Add today's actual portfolio value to the chart
+    try {
+      const summaryRes = await fetch(`${API_BASE}/summary`);
+      if (summaryRes.ok) {
+        const summary = await summaryRes.json();
+        const today = new Date().toISOString().split("T")[0];
+        const lastDate = dates[dates.length - 1];
+
+        if (lastDate === today) {
+          values[values.length - 1] = summary.total_market_value;
+        } else {
+          dates = [...dates, today];
+          values = [...values, summary.total_market_value];
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching current portfolio value:", err);
+    }
 
     const canvas = document.getElementById("performance-chart");
     if (!canvas || typeof Chart === "undefined") return;
@@ -1425,24 +1586,58 @@ async function loadDashboardPerformanceChart(startDate, endDate) {
     if (!res.ok) throw new Error("Failed to load performance");
     const data = await res.json();
 
+    let dates = data.map(d => d.date);
+    let values = data.map(d => d.value);
+
+    // Add today's actual portfolio value to the chart
+    try {
+      const summaryRes = await fetch(`${API_BASE}/summary`);
+      if (summaryRes.ok) {
+        const summary = await summaryRes.json();
+        const today = new Date().toISOString().split("T")[0];
+        const lastDate = dates[dates.length - 1];
+
+        if (lastDate === today) {
+          values[values.length - 1] = summary.total_market_value;
+        } else {
+          dates = [...dates, today];
+          values = [...values, summary.total_market_value];
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching current portfolio value:", err);
+    }
+
     const canvas = document.getElementById("dashboard-performance-chart");
-
-    if (!canvas || typeof Chart === "undefined") {
-      console.warn("Dashboard chart canvas or Chart library not available");
-      return;
-    }
-
-    if (!data || !Array.isArray(data) || data.length === 0) {
-      console.warn("No performance data available");
-      return;
-    }
-
-    const dates = data.map(d => d.date);
-    const values = data.map(d => d.value);
+    if (!canvas || typeof Chart === "undefined") return;
 
     if (dashboardPerformanceChart) {
-      dashboardPerformanceChart.destroy();
+      dashboardPerformanceChart.data.labels = dates;
+      dashboardPerformanceChart.data.datasets[0].data = values;
+      dashboardPerformanceChart.update();
+      return;
     }
+
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (
+        x >= dashboardPerformanceChart.chartArea.left &&
+        x <= dashboardPerformanceChart.chartArea.right &&
+        y >= dashboardPerformanceChart.chartArea.top &&
+        y <= dashboardPerformanceChart.chartArea.bottom
+      ) {
+        hoveredX = x;
+        dashboardPerformanceChart.draw();
+      }
+    });
+
+    canvas.addEventListener("mouseleave", () => {
+      hoveredX = null;
+      dashboardPerformanceChart.draw();
+    });
 
     dashboardPerformanceChart = new Chart(canvas, {
       type: "line",
@@ -1518,28 +1713,6 @@ async function loadDashboardPerformanceChart(startDate, endDate) {
       },
       plugins: [verticalLinePlugin]
     });
-
-
-    canvas.addEventListener("mousemove", (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      if (
-        x >= dashboardPerformanceChart.chartArea.left &&
-        x <= dashboardPerformanceChart.chartArea.right &&
-        y >= dashboardPerformanceChart.chartArea.top &&
-        y <= dashboardPerformanceChart.chartArea.bottom
-      ) {
-        hoveredX = x;
-        dashboardPerformanceChart.draw();
-      }
-    });
-
-    canvas.addEventListener("mouseleave", () => {
-      hoveredX = null;
-      dashboardPerformanceChart.draw();
-    });
   } catch (err) {
     console.error("Error loading dashboard performance chart:", err);
   }
@@ -1577,6 +1750,8 @@ function updateMetricsDisplay(summary) {
   const marketValueEl = document.getElementById("metrics-market-value");
   if (marketValueEl) {
     marketValueEl.textContent = `$${summary.total_market_value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const marketGain = summary.total_market_value - summary.total_cost_basis;
+    marketValueEl.style.color = marketGain >= 0 ? "#16a34a" : "#dc2626";
   }
 
   // Update unrealized P&L
@@ -1597,14 +1772,34 @@ function updateMetricsDisplay(summary) {
     realizedEl.style.color = color;
   }
 
+  // Update realized P&L percentage
+  const realizedPctEl = document.getElementById("metrics-realized-pct");
+  if (realizedPctEl) {
+    const realizedPctValue = summary.total_cost_basis > 0
+      ? ((summary.total_realized_pnl / summary.total_cost_basis) * 100).toFixed(2)
+      : 0;
+    const sign = realizedPctValue >= 0 ? "+" : "";
+    realizedPctEl.textContent = `${sign}${realizedPctValue}%`;
+  }
+
   // Update total return
+  const returnAmountEl = document.getElementById("metrics-total-return-amount");
+  if (returnAmountEl) {
+    const amount = summary.total_unrealized_pnl + summary.total_realized_pnl;
+    const color = amount < 0 ? "#dc2626" : "#16a34a";
+    returnAmountEl.textContent = `$${amount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    returnAmountEl.style.color = color;
+  }
+
   const returnEl = document.getElementById("metrics-total-return");
   if (returnEl) {
     const value = summary.total_return_pct;
     const color = value < 0 ? "#dc2626" : "#16a34a";
-    returnEl.textContent = `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+    returnEl.textContent = `${value >= 0 ? "+" : ""}${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
     returnEl.style.color = color;
   }
+
+  applyMetricCardBorders(summary);
 }
 
 async function updateChartsForDate(dateStr) {
@@ -1676,8 +1871,11 @@ function renderPnLBarChart(positions) {
   const canvas = document.getElementById("pnl-bar-chart");
   if (!canvas || typeof Chart === "undefined") return;
 
-  const labels = positions.map(p => p.ticker);
-  const values = positions.map(p =>
+  // Filter out positions with 0 shares
+  const activePositions = positions.filter(p => p.shares_held > 0);
+
+  const labels = activePositions.map(p => p.ticker);
+  const values = activePositions.map(p =>
   (p.realized_pnl ?? 0) + (p.unrealized_pnl ?? 0)
 );
 
@@ -2089,10 +2287,8 @@ function applyMetricsColors() {
     const value = parseFloat(text);
     if (value < 0) {
       realizedEl.style.color = "#dc2626"; // Red for loss
-    } else if (value > 0) {
-      realizedEl.style.color = "#16a34a"; // Green for gain
     } else {
-      realizedEl.style.color = "inherit"; // Default color for zero
+      realizedEl.style.color = "#16a34a"; // Green for gain or break-even
     }
   }
 
@@ -2103,10 +2299,8 @@ function applyMetricsColors() {
     const value = parseFloat(text);
     if (value < 0) {
       unrealizedEl.style.color = "#dc2626"; // Red for loss
-    } else if (value > 0) {
-      unrealizedEl.style.color = "#16a34a"; // Green for gain
     } else {
-      unrealizedEl.style.color = "inherit"; // Default color for zero
+      unrealizedEl.style.color = "#16a34a"; // Green for gain or break-even
     }
   }
 
@@ -2149,6 +2343,70 @@ function applyMetricsColors() {
       winRateEl.style.color = "#16a34a"; // Green for 50% or above
     } else {
       winRateEl.style.color = "inherit";
+    }
+  }
+}
+
+function applyMetricCardBorders(summary) {
+  const portfolioMetrics = document.getElementById("portfolio-metrics");
+  if (!portfolioMetrics) return;
+
+  const cards = portfolioMetrics.querySelectorAll(".card");
+  cards.forEach(card => {
+    card.classList.remove("card-positive", "card-negative");
+  });
+
+  // Market Value card
+  const marketValueCard = document.querySelector("#metrics-market-value")?.closest(".card");
+  if (marketValueCard) {
+    const gain = summary.total_market_value - summary.total_cost_basis;
+    if (gain >= 0) {
+      marketValueCard.classList.add("card-positive");
+    } else {
+      marketValueCard.classList.add("card-negative");
+    }
+  }
+
+  // Unrealized P&L card
+  const unrealizedCard = document.querySelector("#metrics-unrealized-pnl")?.closest(".card");
+  if (unrealizedCard) {
+    if (summary.total_unrealized_pnl >= 0) {
+      unrealizedCard.classList.add("card-positive");
+    } else {
+      unrealizedCard.classList.add("card-negative");
+    }
+  }
+
+  // Realized P&L card
+  const realizedCard = document.querySelector("#metrics-realized-pnl")?.closest(".card");
+  if (realizedCard) {
+    if (summary.total_realized_pnl >= 0) {
+      realizedCard.classList.add("card-positive");
+    } else {
+      realizedCard.classList.add("card-negative");
+    }
+  }
+
+  // Total Return card
+  const totalReturnCard = document.querySelector("#metrics-total-return-amount")?.closest(".card");
+  if (totalReturnCard) {
+    const totalAmount = summary.total_unrealized_pnl + summary.total_realized_pnl;
+    if (totalAmount >= 0) {
+      totalReturnCard.classList.add("card-positive");
+    } else {
+      totalReturnCard.classList.add("card-negative");
+    }
+  }
+
+  // Win Rate card
+  const winRateCard = document.querySelector("#win-rate-pct")?.closest(".card");
+  if (winRateCard) {
+    const winRateText = document.getElementById("win-rate-pct")?.textContent.replace(/[%]/g, "");
+    const winRateValue = parseFloat(winRateText);
+    if (winRateValue >= 50) {
+      winRateCard.classList.add("card-positive");
+    } else {
+      winRateCard.classList.add("card-negative");
     }
   }
 }

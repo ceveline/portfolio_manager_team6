@@ -255,12 +255,15 @@ def calculate_win_rate():
             )
             ticker_state[tx.ticker]["shares"] = new_shares
         elif tx.action == "sell":
-            total_sells += 1
-            avg_cost = ticker_state[tx.ticker]["avg_cost"]
-            pnl = (tx.price - avg_cost) * tx.quantity
-            if pnl > 0:
-                winning_trades += 1
-            ticker_state[tx.ticker]["shares"] -= tx.quantity
+            shares = ticker_state[tx.ticker]["shares"]
+            sell_qty = min(tx.quantity, shares)
+            if sell_qty > 0:
+                total_sells += 1
+                avg_cost = ticker_state[tx.ticker]["avg_cost"]
+                pnl = (tx.price - avg_cost) * sell_qty
+                if pnl > 0:
+                    winning_trades += 1
+            ticker_state[tx.ticker]["shares"] -= sell_qty
 
     win_rate_pct = (winning_trades / total_sells * 100) if total_sells > 0 else 0.0
 
@@ -287,13 +290,13 @@ def portfolio_summary(current_prices):
     for ticker in tickers:
         pos = replay_position(ticker)
         total_quantity = pos["shares_held"]
+        realized_pnl = pos["realized_pnl"]
+        total_realized_pnl += realized_pnl
+
+        avg_price = pos["avg_cost"]
 
         if total_quantity <= 0:
             continue
-
-        avg_price = pos["avg_cost"]
-        realized_pnl = pos["realized_pnl"]
-        total_realized_pnl += realized_pnl
 
         current_price = current_prices.get(ticker)
         cost_basis_value = round(total_quantity * avg_price, 2)
@@ -303,6 +306,7 @@ def portfolio_summary(current_prices):
             else None
         )
 
+        total_cost_basis += cost_basis_value
         positions.append(
             {
                 "ticker": ticker,
@@ -322,7 +326,6 @@ def portfolio_summary(current_prices):
 
         if market_value is not None:
             total_market_value += market_value
-        total_cost_basis += cost_basis_value
 
     total_return_pct = 0.0
     if total_cost_basis > 0:

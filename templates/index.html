@@ -6,6 +6,7 @@
   <link href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta17/dist/css/tabler.min.css" rel="stylesheet">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%23206bc4'>💰</text></svg>" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -145,7 +146,7 @@
               <div class="text-muted small">REALIZED P&L <span class="metric-info" data-tooltip="Profit/loss from trades that were closed">ⓘ</span></div>
             </div>
             <div class="h3 mb-2" id="metrics-realized-pnl">-</div>
-            <div class="text-muted small">From closed trades</div>
+            <div class="text-muted small" id="metrics-realized-pct">-</div>
           </div>
         </div>
       </div>
@@ -156,8 +157,8 @@
             <div class="metric-label">
               <div class="text-muted small">TOTAL RETURN <span class="metric-info" data-tooltip="Overall percentage gain or loss on your portfolio">ⓘ</span></div>
             </div>
-            <div class="h3 mb-2" id="metrics-total-return">-</div>
-            <div class="text-muted small" id="metrics-total-return-amount">-</div>
+            <div class="h3 mb-2" id="metrics-total-return-amount">-</div>
+            <div class="text-muted small" id="metrics-total-return">-</div>
           </div>
         </div>
       </div>
@@ -185,20 +186,20 @@
 
   <main>
 
-    <div class="row" style="display: flex; gap: 0.5rem; padding-left: 2rem; padding-right: 2rem;">
-      <div class="col-md-6" style="flex: 1; display: flex; margin: 0;">
-        <section id="dashboard-performance" class="card d-none" style="width: 100%; display: flex; flex-direction: column; margin: 0;">
-          <div class="card-body" style="display: flex; flex-direction: column; flex: 1; padding: 1rem;">
+    <div class="row" style="display: flex; gap: 0.5rem; padding-left: 2rem; padding-right: 2rem; align-items: stretch;">
+      <div class="col-md-6" style="flex: 1; min-width: 0;">
+        <section id="dashboard-performance" class="card d-none" style="width: 100%; height: 100%; margin: 0; display: flex; flex-direction: column;">
+          <div class="card-body" style="padding: 1rem; flex: 1; display: flex; flex-direction: column;">
             <h2 class="card-title mb-3">Portfolio Value</h2>
-            <div id="dashboard-performance-chart-container" style="position: relative; width: 100%; flex: 1; min-height: 0;">
+            <div id="dashboard-performance-chart-container" style="position: relative; width: 100%; height: 250px; flex: 1;">
               <canvas id="dashboard-performance-chart"></canvas>
             </div>
           </div>
         </section>
       </div>
 
-      <div class="col-md-6" style="flex: 1; display: flex; margin: 0;">
-        <section id="dashboard" class="card" style="width: 100%; margin: 0;">
+      <div class="col-md-6" style="flex: 1; min-width: 0;">
+        <section id="dashboard" class="card" style="width: 100%; height: 100%; margin: 0; display: flex; flex-direction: column;">
           <div class="card-body" class="flex-col">
             <h2 class="card-title mb-3">Top Holdings</h2>
             <div class="table-responsive" class="scrollable">
@@ -241,7 +242,6 @@
             <option value="META">Meta Platforms Inc.</option>
             <option value="MSFT">Microsoft Corporation</option>
             <option value="NVDA">NVIDIA</option>
-            <option value="SPY">S&P 500 ETF</option>
             <option value="TSLA">Tesla</option>
           </datalist>
       </div>
@@ -440,7 +440,6 @@
               <option value="meta">META</option>
               <option value="amzn">AMZN</option>
               <option value="nvda">NVDA</option>
-              <option value="spy">SPY</option>
             </select>
           </div>
           <div class="col-md-2">

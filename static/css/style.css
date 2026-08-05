@@ -170,6 +170,15 @@ h2 {
   border: none;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-left: 4px solid transparent;
+}
+
+.card.card-positive {
+  border-left-color: #16a34a;
+}
+
+.card.card-negative {
+  border-left-color: #dc2626;
 }
 
 #portfolio-summary .col-md-3 {
