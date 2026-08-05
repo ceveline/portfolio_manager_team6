@@ -329,3 +329,7 @@ CREATE TABLE transactions (
 - **Transaction History** — All buys and sells logged as immutable audit trail
 - **Auto Price Lookup** — Stock price auto-populated when ticker selected; frontend handles UX
 - **Dual Price Sources** — Uses AWS cached API for reliability and speed, with yfinance fallback for any ticker
+
+
+## Presentation link (canva)
+- https://canva.link/r099y0sicompl10
