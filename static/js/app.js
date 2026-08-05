@@ -1834,7 +1834,7 @@ document.addEventListener("DOMContentLoaded", () => {
             editProfileBtn.style.display = "none";
             saveProfileBtn.style.display = "inline-block";
 
-            showToastMessage("✏️ Edit mode enabled");
+            showToastMessage("Edit mode enabled");
 
             document.getElementById("first-name-value").focus();
 
@@ -2044,21 +2044,6 @@ function setAutoRefreshInterval(milliseconds) {
   console.log(`Auto refresh set to ${minutes} minute(s)`);
 }
 
-function stopAutoRefresh() {
-  if (refreshTimer) {
-    clearInterval(refreshTimer);
-    refreshTimer = null;
-  }
-
-  refreshInterval = 0;
-
-  const statusEl = document.getElementById("refresh-status");
-  if (statusEl) {
-    statusEl.textContent = "Auto refresh: Off";
-  }
-
-  console.log("Auto refresh stopped");
-}
 
 function showToastMessage(message) {
   const toastEl = document.getElementById("toast-message");
