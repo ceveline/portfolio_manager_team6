@@ -17,16 +17,7 @@ fi
 echo "✓ Transactions added"
 echo ""
 
-echo "2. Adding holdings..."
-mysql -u $DB_USER $DB_NAME < data_migrations/002_add_holdings.sql
-if [ $? -ne 0 ]; then
-    echo "Error running 002_add_holdings.sql"
-    exit 1
-fi
-echo "✓ Holdings added"
-echo ""
-
-echo "3. Adding price history..."
+echo "2. Adding price history..."
 mysql -u $DB_USER $DB_NAME < data_migrations/003_add_price_history.sql
 if [ $? -ne 0 ]; then
     echo "Error running 003_add_price_history.sql"
