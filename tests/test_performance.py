@@ -4,7 +4,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from app import create_app, db
-from app.models import Transaction, PriceHistory, Holding
+from app.models import Transaction, PriceHistory
 from app import performance as perf
 
 
@@ -62,13 +62,6 @@ def seed_large_dataset(num_tickers=20, days=365):
         tx_rows.append(Transaction(action="sell", ticker=ticker, quantity=qty // 2, price=price + 1.0, transaction_date=sell_date))
 
     db.session.bulk_save_objects(tx_rows)
-
-    # Holdings: aggregate a holding per ticker roughly matching buys
-    holdings = []
-    for t_idx, ticker in enumerate(tickers):
-        holdings.append(Holding(ticker=ticker, quantity=100.0, purchase_price=10.0, purchase_date=start))
-
-    db.session.bulk_save_objects(holdings)
     db.session.commit()
 
     return tickers, start, start + timedelta(days=days - 1)
@@ -120,8 +113,12 @@ def test_replay_and_winrate_performance(test_app):
 
 def test_portfolio_summary_performance(test_app):
     with test_app.app_context():
-        # Prepare current prices map for tickers found in holdings
-        tickers = [h.ticker for h in Holding.query.with_entities(Holding.ticker).distinct().all()]
+        # Prepare current prices map for tickers from transactions
+        if not Transaction.query.first():
+            tickers, _, _ = seed_large_dataset(num_tickers=10, days=180)
+        else:
+            tickers = [r[0] for r in db.session.query(Transaction.ticker).distinct().all()]
+
         current_prices = {t: 12.34 for t in tickers}
 
         t0 = time.perf_counter()

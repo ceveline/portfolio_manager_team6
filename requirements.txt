@@ -5,3 +5,5 @@ pytest==8.2.2
 yfinance==1.5.2
 requests==2.31.0
 curl-cffi>=0.7.3
+PyMySQL==1.2.0
+python-dotenv==1.2.2

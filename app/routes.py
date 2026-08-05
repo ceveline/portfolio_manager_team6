@@ -6,7 +6,7 @@ from flasgger import swag_from
 from flask import Flask, Blueprint, jsonify, request, render_template
 
 from app import db, performance, price_backfill
-from app.models import User, Holding, PriceHistory, Transaction
+from app.models import User, PriceHistory, Transaction
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
@@ -204,31 +204,24 @@ def get_ticker_info(ticker):
 @swag_from(
     {
         "tags": ["Holdings"],
-        "summary": "List all holdings",
-        "responses": {200: {"description": "List of holdings"}},
+        "summary": "Get consolidated holdings (grouped by ticker)",
+        "responses": {200: {"description": "Consolidated holdings by ticker"}},
     }
 )
-
 def list_holdings():
-    print("Holdings requested at", datetime.now())
-    holdings = Holding.query.all()
-    return jsonify([h.to_dict() for h in holdings]), 200
+    tickers = performance.all_tickers()
 
+    result = []
+    for ticker in tickers:
+        pos = performance.replay_position(ticker)
+        if pos["shares_held"] > 0:
+            result.append({
+                "ticker": ticker,
+                "quantity": float(pos["shares_held"]),
+                "avg_price": float(pos["avg_cost"]),
+            })
 
-@api.route("/holdings/<int:holding_id>", methods=["GET"])
-@swag_from(
-    {
-        "tags": ["Holdings"],
-        "summary": "Get a single holding",
-        "parameters": [
-            {"name": "holding_id", "in": "path", "type": "integer", "required": True}
-        ],
-        "responses": {200: {"description": "Holding"}, 404: {"description": "Not found"}},
-    }
-)
-def get_holding(holding_id):
-    holding = Holding.query.get_or_404(holding_id)
-    return jsonify(holding.to_dict()), 200
+    return jsonify(result), 200
 
 
 @api.route("/holdings", methods=["POST"])
@@ -277,13 +270,6 @@ def create_holding():
     )
 
     ticker_upper = ticker.upper()
-    holding = Holding(
-        ticker=ticker_upper,
-        quantity=quantity,
-        purchase_price=purchase_price,
-        **({"purchase_date": purchase_date} if purchase_date else {}),
-    )
-    db.session.add(holding)
 
     # Check if user has sufficient balance
     cost = quantity * purchase_price
@@ -311,46 +297,52 @@ def create_holding():
 
     db.session.commit()
 
-    return jsonify(holding.to_dict()), 201
+    return jsonify({
+        "ticker": ticker_upper,
+        "quantity": quantity,
+        "purchase_price": purchase_price,
+        "purchase_date": purchase_date.isoformat() if purchase_date else date.today().isoformat(),
+    }), 201
 
 
-@api.route("/holdings/<int:holding_id>", methods=["DELETE"])
+@api.route("/holdings/sell", methods=["POST"])
 @swag_from(
     {
         "tags": ["Holdings"],
-        "summary": "Sell - remove or reduce a holding from the portfolio",
+        "summary": "Sell - record a sell transaction for a ticker",
         "parameters": [
-            {"name": "holding_id", "in": "path", "type": "integer", "required": True},
             {
-                "name": "quantity",
-                "in": "query",
-                "type": "number",
-                "required": False,
-                "description": "Quantity to sell (if not provided, entire holding is sold)"
-            },
-            {
-                "name": "sell_price",
-                "in": "query",
-                "type": "number",
+                "name": "body",
+                "in": "body",
                 "required": True,
-                "description": "Current market price per share"
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "ticker": {"type": "string", "example": "AAPL"},
+                        "quantity": {"type": "number", "example": 5},
+                        "sell_price": {"type": "number", "example": 175.50},
+                        "sell_date": {"type": "string", "example": "2026-07-25"},
+                    },
+                    "required": ["ticker", "quantity", "sell_price"],
+                },
             }
         ],
-        "responses": {204: {"description": "Holding deleted or updated"}, 400: {"description": "Missing sell_price"}, 404: {"description": "Not found"}},
+        "responses": {201: {"description": "Transaction created"}, 400: {"description": "Validation error"}},
     }
 )
-def delete_holding(holding_id):
+def sell_holding():
     from decimal import Decimal
 
-    holding = Holding.query.get_or_404(holding_id)
-    quantity_to_sell = request.args.get("quantity", type=float)
-    sell_price_raw = request.args.get("sell_price", type=float)
-    sell_date_str = request.args.get("sell_date")
+    data = request.get_json(force=True) or {}
+    ticker = data.get("ticker")
+    quantity_to_sell = data.get("quantity")
+    sell_price_raw = data.get("sell_price")
+    sell_date_str = data.get("sell_date")
 
-    if sell_price_raw is None:
-        return jsonify({"error": "sell_price is required"}), 400
+    if not ticker or quantity_to_sell is None or sell_price_raw is None:
+        return jsonify({"error": "ticker, quantity, and sell_price are required"}), 400
 
-    # Convert to Decimal for precise calculations, rounded to 2 decimals
+    ticker_upper = ticker.upper()
     sell_price = Decimal(str(round(sell_price_raw, 2)))
 
     sell_date = (
@@ -359,46 +351,29 @@ def delete_holding(holding_id):
         else None
     )
 
-    if quantity_to_sell:
-        transaction = Transaction(
-            action="sell",
-            ticker=holding.ticker,
-            quantity=quantity_to_sell,
-            price=float(sell_price),
-            **({"transaction_date": sell_date} if sell_date else {}),
-        )
-        db.session.add(transaction)
-        holding.quantity -= quantity_to_sell
-        if holding.quantity <= 0:
-            db.session.delete(holding)
+    transaction = Transaction(
+        action="sell",
+        ticker=ticker_upper,
+        quantity=quantity_to_sell,
+        price=float(sell_price),
+        **({"transaction_date": sell_date} if sell_date else {}),
+    )
+    db.session.add(transaction)
 
-        # Update user account balance (add sale proceeds at market price)
-        proceeds = Decimal(str(quantity_to_sell)) * sell_price
-        user = User.query.first()
-        if user:
-            user.account_balance += proceeds
+    # Update user account balance (add sale proceeds at market price)
+    proceeds = Decimal(str(quantity_to_sell)) * sell_price
+    user = User.query.first()
+    if user:
+        user.account_balance += proceeds
 
-        db.session.commit()
-    else:
-        transaction = Transaction(
-            action="sell",
-            ticker=holding.ticker,
-            quantity=holding.quantity,
-            price=float(sell_price),
-            **({"transaction_date": sell_date} if sell_date else {}),
-        )
-        db.session.add(transaction)
+    db.session.commit()
 
-        # Update user account balance (add sale proceeds at market price)
-        proceeds = Decimal(str(holding.quantity)) * sell_price
-        user = User.query.first()
-        if user:
-            user.account_balance += proceeds
-
-        db.session.delete(holding)
-        db.session.commit()
-
-    return "", 204
+    return jsonify({
+        "ticker": ticker_upper,
+        "quantity": quantity_to_sell,
+        "sell_price": float(sell_price),
+        "sell_date": sell_date.isoformat() if sell_date else date.today().isoformat(),
+    }), 201
 
 
 @api.route("/consolidated", methods=["GET"])
@@ -410,28 +385,17 @@ def delete_holding(holding_id):
     }
 )
 def get_consolidated():
-    from sqlalchemy import func
+    # Get all tickers from transaction history
+    tickers = performance.all_tickers()
 
-    # Get holdings grouped by ticker
-    consolidated = (
-        db.session.query(
-            Holding.ticker,
-            func.sum(Holding.quantity).label("total_quantity"),
-        )
-        .group_by(Holding.ticker)
-        .all()
-    )
-
-    # Calculate avg price from transaction history (source of truth)
     result = []
-    for ticker, total_qty in consolidated:
-        if total_qty and total_qty > 0:
-            pos = performance.replay_position(ticker)
-            avg_price = pos["avg_cost"]
+    for ticker in tickers:
+        pos = performance.replay_position(ticker)
+        if pos["shares_held"] > 0:
             result.append({
                 "ticker": ticker,
-                "quantity": float(total_qty),
-                "avg_price": float(avg_price),
+                "quantity": float(pos["shares_held"]),
+                "avg_price": float(pos["avg_cost"]),
             })
 
     return jsonify(result), 200

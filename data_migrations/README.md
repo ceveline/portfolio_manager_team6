@@ -2,44 +2,59 @@
 
 Seed scripts to populate the database with sample data for testing and development.
 
+## Prerequisites
+
+- MySQL server must be running
+- Database created: `mysql -u root -e "CREATE DATABASE IF NOT EXISTS portfolio_manager;"`
+- Flask app tables created: `python -c "from app import create_app, db; app = create_app(); with app.app_context(): db.create_all()"`
+
 ## Running the migrations
 
-Run all three in order:
+**Option 1: Individual scripts (for transactions and price history)**
 
 ```bash
 mysql -u root portfolio_manager < data_migrations/001_add_transactions.sql
-mysql -u root portfolio_manager < data_migrations/002_add_holdings.sql
 mysql -u root portfolio_manager < data_migrations/003_add_price_history.sql
 ```
 
-Or use the convenience script:
+**Option 2: Using the convenience script**
 
 ```bash
-./data_migrations/run_all.sh
+bash data_migrations/run_all.sh
 ```
+
+This will run all available migrations in order with progress feedback.
 
 ## What each script does
 
-1. **001_add_transactions.sql** - Creates buy/sell transactions dating back 1 year
-   - AAPL: Buy 100 (1y ago), Sell 25 (6mo ago)
-   - MSFT: Buy 50 (1y ago), Sell 20 (1mo ago)
-   - GOOGL: Buy 30 (6mo ago)
-   - TSLA: Buy 75 (3mo ago)
-   - AMZN: Buy 50 (1 week ago)
+1. **001_add_transactions.sql** - Creates biweekly buy transactions from Feb 2026 to July 2026
+   - **AAPL:** 13 buys of 10 shares each (130 total) at varying prices ($248.73 - $338.19)
+   - **GOOGL:** 13 buys of 10 shares each (130 total) at varying prices ($295.59 - $396.54)
+   - All purchases use actual closing prices from the price history table
+   - Purchases occur every 2 weeks over a 6-month period
 
-2. **002_add_holdings.sql** - Creates holdings based on net transactions
-   - AAPL: 75 shares (100 - 25)
-   - MSFT: 30 shares (50 - 20)
-   - GOOGL: 30 shares
-   - TSLA: 75 shares
-   - AMZN: 50 shares
-
-3. **003_add_price_history.sql** - Creates daily price history for 1 year
-   - Each ticker has 12 data points spanning the year
+2. **003_add_price_history.sql** - Creates daily price history for 1 year
+   - Each ticker has multiple data points spanning the year
    - Prices show realistic growth patterns
+   - Required for portfolio performance charts
 
-## Notes
+## Important Notes
 
-- Dates are relative to today using `CURDATE()` so they stay current
-- All three scripts should be run in order for the data to be complete
-- You can run them multiple times if needed (will create duplicates)
+- Dates use `CURDATE()` so data stays current relative to today
+- **Duplicates:** Running scripts multiple times will create duplicate records. To reset, you may need to clear the tables manually:
+  ```bash
+  mysql -u root portfolio_manager -e "DELETE FROM transactions; DELETE FROM price_history;"
+  ```
+- The transaction data is the source of truth; holdings are calculated from transactions
+- Price history is required for performance calculations and charts
+
+## Troubleshooting
+
+If you see an error like "Table already exists":
+- This is expected if data was already loaded
+- To reload, delete records first (see above)
+
+If a migration fails:
+- Verify MySQL is running: `brew services start mysql`
+- Check database exists: `mysql -u root -e "SHOW DATABASES;"`
+- Verify tables exist: `mysql -u root portfolio_manager -e "SHOW TABLES;"`

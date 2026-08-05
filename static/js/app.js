@@ -946,18 +946,13 @@ function populateSellDropdown(holdings) {
 }
 
 function getPortfolioAvgPrice(ticker, holdings = holdingsData) {
-  const matchingHoldings = holdings.filter((holding) => holding.ticker === ticker);
-  if (!matchingHoldings.length) {
+  const matchingHolding = holdings.find((holding) => holding.ticker === ticker);
+  if (!matchingHolding) {
     return 0;
   }
 
-  const totalQuantity = matchingHoldings.reduce((sum, holding) => sum + Number(holding.quantity || 0), 0);
-  const weightedCost = matchingHoldings.reduce(
-    (sum, holding) => sum + Number(holding.quantity || 0) * Number(holding.purchase_price || 0),
-    0,
-  );
-
-  return totalQuantity ? weightedCost / totalQuantity : 0;
+  // Consolidated holdings return avg_price directly
+  return Number(matchingHolding.avg_price || 0);
 }
 
 function clearSellDetails() {
@@ -1149,22 +1144,27 @@ document.getElementById("sell-form").addEventListener("submit", async (e) => {
     return;
   }
 
-  // FIFO deletion: delete from holdings in order until quantity is satisfied
-  const holdingsToDelete = holdingsData.filter(h => h.ticker === ticker).sort((a, b) => {
-    // Sort by purchase date (earliest first for FIFO)
-    return new Date(a.purchase_date) - new Date(b.purchase_date);
-  });
+  // Sell all quantity in one transaction
+  try {
+    const sellRes = await fetch(`${API_BASE}/holdings/sell`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ticker: ticker,
+        quantity: quantityToSell,
+        sell_price: currentPrice
+      })
+    });
 
-  for (const holding of holdingsToDelete) {
-    if (quantityToSell <= 0) break;
-
-    const sellQty = Math.min(quantityToSell, holding.quantity);
-    const url = new URL(`${API_BASE}/holdings/${holding.id}`, window.location.origin);
-    url.searchParams.append("quantity", sellQty);
-    url.searchParams.append("sell_price", currentPrice);
-
-    await fetch(url, { method: "DELETE" });
-    quantityToSell -= sellQty;
+    if (!sellRes.ok) {
+      const error = await sellRes.json();
+      throw new Error(error.error || "Failed to sell shares");
+    }
+  } catch (err) {
+    errorEl.textContent = `Buy failed: ${err.message}`;
+    errorEl.classList.remove("d-none");
+    setTimeout(() => errorEl.classList.add("d-none"), 4000);
+    return;
   }
 
   const sellMessage = document.getElementById("sell-success-message");

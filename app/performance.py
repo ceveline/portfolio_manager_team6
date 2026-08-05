@@ -164,7 +164,8 @@ def portfolio_value_series(start_date, end_date, tickers=None):
             # Replay transactions up to current date
             shares = 0.0
             for tx in tx_by_ticker.get(ticker, []):
-                if tx.transaction_date.date() > current:
+                tx_date = tx.transaction_date.date() if hasattr(tx.transaction_date, 'date') else tx.transaction_date
+                if tx_date > current:
                     break
                 if tx.action == "buy":
                     shares += tx.quantity
@@ -195,7 +196,8 @@ def portfolio_value_series(start_date, end_date, tickers=None):
         for ticker in tickers:
             shares = 0.0
             for tx in tx_by_ticker.get(ticker, []):
-                if tx.transaction_date.date() > end_date:
+                tx_date = tx.transaction_date.date() if hasattr(tx.transaction_date, 'date') else tx.transaction_date
+                if tx_date > end_date:
                     break
                 if tx.action == "buy":
                     shares += tx.quantity
@@ -234,33 +236,31 @@ def calculate_win_rate():
     if not all_transactions:
         return {"win_rate_pct": 0.0, "winning_trades": 0, "total_trades": 0}
 
-    # Track average cost per ticker
-    avg_costs = {}
+    # Track average cost and shares per ticker as we iterate
+    ticker_state = {}
     winning_trades = 0
     total_sells = 0
 
     for tx in all_transactions:
-        if tx.action == "buy":
-            # Update average cost for this ticker
-            if tx.ticker not in avg_costs:
-                avg_costs[tx.ticker] = 0.0
+        if tx.ticker not in ticker_state:
+            ticker_state[tx.ticker] = {"shares": 0.0, "avg_cost": 0.0}
 
-            current_shares = sum(t.quantity for t in all_transactions
-                               if t.ticker == tx.ticker
-                               and t.action == "buy"
-                               and (t.transaction_date < tx.transaction_date or
-                                    (t.transaction_date == tx.transaction_date and t.id < tx.id)))
-            new_shares = current_shares + tx.quantity
-            avg_costs[tx.ticker] = (
-                (avg_costs[tx.ticker] * current_shares + tx.price * tx.quantity) / new_shares
+        if tx.action == "buy":
+            shares = ticker_state[tx.ticker]["shares"]
+            avg_cost = ticker_state[tx.ticker]["avg_cost"]
+            new_shares = shares + tx.quantity
+            ticker_state[tx.ticker]["avg_cost"] = (
+                (avg_cost * shares + tx.price * tx.quantity) / new_shares
                 if new_shares > 0 else tx.price
             )
+            ticker_state[tx.ticker]["shares"] = new_shares
         elif tx.action == "sell":
             total_sells += 1
-            avg_cost = avg_costs.get(tx.ticker, 0.0)
+            avg_cost = ticker_state[tx.ticker]["avg_cost"]
             pnl = (tx.price - avg_cost) * tx.quantity
             if pnl > 0:
                 winning_trades += 1
+            ticker_state[tx.ticker]["shares"] -= tx.quantity
 
     win_rate_pct = (winning_trades / total_sells * 100) if total_sells > 0 else 0.0
 
@@ -274,28 +274,23 @@ def calculate_win_rate():
 def portfolio_summary(current_prices):
     """current_prices: {ticker: live_price_or_None}. Returns per-ticker
     and total cost basis, market value, and realized/unrealized P&L.
-    Uses actual holdings from database as source of truth.
+    Derives holdings from transaction history (source of truth).
     """
-    from app.models import Holding
-    from sqlalchemy import func
-
     positions = []
     total_market_value = 0.0
     total_cost_basis = 0.0
     total_realized_pnl = 0.0
 
-    # Get consolidated holdings grouped by ticker
-    consolidated = db.session.query(
-        Holding.ticker,
-        func.sum(Holding.quantity).label("total_quantity"),
-    ).group_by(Holding.ticker).all()
+    # Get all tickers from transaction history
+    tickers = all_tickers()
 
-    for ticker, total_quantity in consolidated:
+    for ticker in tickers:
+        pos = replay_position(ticker)
+        total_quantity = pos["shares_held"]
+
         if total_quantity <= 0:
             continue
 
-        # Get avg cost and realized P&L from transaction history (source of truth)
-        pos = replay_position(ticker)
         avg_price = pos["avg_cost"]
         realized_pnl = pos["realized_pnl"]
         total_realized_pnl += realized_pnl
