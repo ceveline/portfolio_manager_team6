@@ -11,12 +11,12 @@ A stock portfolio management app that tracks holdings, transactions, and portfol
 ## Features
 
 - **Buy & Sell Stocks** — Add and remove multiple stocks from your portfolio
-- **Auto Price Lookup** — Ticker dropdown with auto-populated current prices from AWS cached API
+- **Auto Price Lookup** — Ticker dropdown with auto-populated current prices from Yahoo Finance
 - **Portfolio Summary** — Live total portfolio value and share count in header
-- **Consolidated View** — See total shares and average price per ticker
-- **Transaction History** — Complete record of all buys and sells
+- **Holdings Table** — See total shares, average cost, market value, and P&L per ticker
+- **Transaction History** — Complete record of all buys and sells with advanced filtering
 - **Performance Chart** — Line chart showing portfolio value over time
-- **Price History** — Historical daily prices for all tickers
+- **Win Rate Tracking** — Percentage of profitable sell transactions
 
 ## Stack
 
@@ -24,8 +24,8 @@ A stock portfolio management app that tracks holdings, transactions, and portfol
 - Flask-SQLAlchemy (MySQL with PyMySQL)
 - Plain HTML/JS frontend (no framework)
 - Swagger docs via flasgger
-- AWS cached price API (stock price data)
-- yfinance (historical price backfilling)
+- yfinance + curl_cffi (stock price data with TLS fingerprinting)
+- Chart.js (performance and P&L charting)
 
 ## Setup & Running
 
@@ -127,23 +127,22 @@ The app starts in debug mode on `http://localhost:5001`
 
 ### Holdings & Transactions
 
-- `GET /api/holdings` — List all current holdings
-- `POST /api/holdings` — Buy stocks (creates transaction + holding)
-- `DELETE /api/holdings/<ticker>` — Sell stocks (creates sell transaction)
-- `GET /api/transactions` — Get transaction history (with filtering)
-- `GET /api/consolidated` — Get consolidated view (grouped by ticker)
+- `GET /api/holdings` — List all current holdings (ticker, quantity, avg cost)
+- `POST /api/holdings` — Buy stocks (creates transaction, updates avg cost)
+- `POST /api/holdings/sell` — Sell stocks (creates sell transaction)
+- `GET /api/transactions` — Get transaction history with filtering
+- `GET /api/portfolio` — Get portfolio holdings grouped by ticker
 
 ### Portfolio Analysis
 
-- `GET /api/summary` — Portfolio summary (cost basis, P&L per ticker)
+- `GET /api/summary` — Portfolio summary (cost basis, market value, P&L per ticker and total)
 - `GET /api/performance` — Portfolio value over time (for charting)
-- `GET /api/win-rate` — Win rate statistics
+- `GET /api/win-rate` — Win rate statistics (% of profitable sells)
 
 ### Price Data
 
-- `GET /api/price/<ticker>` — Get current price for a ticker
-- `POST /api/price-history/backfill` — Backfill historical prices from Yahoo Finance
-- `GET /api/price-history` — Get stored historical prices
+- `GET /api/price/<ticker>` — Get current price for a ticker from Yahoo Finance
+- `GET /api/ticker/<ticker>` — Get detailed ticker info (sector, industry, P/E ratio, etc.)
 
 See Swagger UI at http://localhost:5001/apidocs for full documentation.
 
@@ -159,21 +158,24 @@ pytest
 portfolio-manager/
   app/
     __init__.py              # app factory
-    config.py                # DB config (MySQL support)
-    models.py                # SQLAlchemy models
+    config.py                # DB config (MySQL)
+    models.py                # SQLAlchemy models (User, Transaction, PriceHistory)
     routes.py                # REST API endpoints
-    performance.py           # Portfolio calculations
+    performance.py           # Portfolio calculations (avg cost, P&L, win rate)
     price_backfill.py        # Yahoo Finance price fetching
   data_migrations/
     001_add_transactions.sql # Sample transaction data
-    002_add_holdings.sql     # Sample holdings data
     003_add_price_history.sql # Sample price history data
     README.md                # Data migration guide
   static/
     css/style.css
     js/app.js
+  templates/
+    index.html
   tests/
-    # Test files
+    test_api.py
+    test_pnl.py
+    test_performance.py
   .env                       # Database connection (create this)
   run.py                     # Application entry point
   requirements.txt           # Python dependencies
@@ -190,145 +192,53 @@ portfolio-manager/
 ### Missing Price History
 
 - Performance chart needs price history to calculate portfolio value
-- Run price backfill: `curl -X POST http://localhost:5001/api/price-history/backfill`
-- Or load sample data from `data_migrations/003_add_price_history.sql`
+- Load sample data from `data_migrations/003_add_price_history.sql`
 
 ### Port Already in Use
 
 - Change port in `run.py` (default: 5001)
 - Or kill existing process: `lsof -ti:5001 | xargs kill -9`
-  templates/
-    index.html
-  tests/
-    test_api.py
-  run.py
-  requirements.txt
-```
 
-## API
+## Design & Architecture
 
-| Method | Endpoint              | Description                                |
-| ------ | --------------------- | ------------------------------------------ |
-| GET    | /api/holdings         | List all individual holdings               |
-| GET    | /api/consolidated     | Consolidated portfolio (grouped by ticker) |
-| GET    | /api/holdings/`<id>`  | Single holding                             |
-| POST   | /api/holdings         | Buy - create a holding                     |
-| DELETE | /api/holdings/`<id>`  | Sell - reduce/remove a holding             |
-| GET    | /api/transactions     | Transaction history                        |
-| GET    | /api/price/`<ticker>` | Get current stock price                    |
+### Data Model
 
-### POST /api/holdings
-
-Buy stocks:
-
-```json
-{
-  "ticker": "AAPL",
-  "quantity": 12,
-  "purchase_price": 150.25,
-  "purchase_date": "2026-07-20"
-}
-```
-
-`purchase_date` is optional (defaults to today).
-
-### DELETE /api/holdings/`<id>`
-
-Sell stocks:
-
-```
-DELETE /api/holdings/1?quantity=5
-```
-
-`quantity` parameter is optional. If provided, only that quantity is sold and the holding is reduced. If not provided, the entire holding is deleted.
-
-## Data Model
-
-**Holding** — Individual stock purchase
-
-- `id`, `ticker`, `quantity`, `purchase_price`, `purchase_date`
-
-**Transaction** — Buy/sell record
-
+**Transactions** (source of truth)
 - `id`, `action` (buy/sell), `ticker`, `quantity`, `price`, `transaction_date`
+- All buys and sells are recorded as immutable audit trail
 
-## Architecture
+**Price History**
+- `id`, `ticker`, `price_date`, `close_price`
+- Used for portfolio value calculations and performance charting
 
-### Backend (Flask + SQLAlchemy)
+**Holdings** (calculated, not stored)
+- Derived from transaction history using average-cost method
+- Each holding shows: shares owned, average cost, current price, cost basis, market value, P&L
 
-**Routes** (`app/routes.py`):
+### Key Concepts
 
-- `GET /api/holdings` — Returns all individual holdings
-- `GET /api/consolidated` — Groups holdings by ticker, calculates totals & average prices
-- `GET /api/transactions` — Returns all buy/sell history
-- `POST /api/holdings` — Create new holding (buy)
-- `DELETE /api/holdings/<id>?quantity=X` — Reduce/delete holding (sell)
-- `GET /api/price/<ticker>` — Fetch current price from AWS API or yfinance
+**Average-Cost Method**
+- When you buy more shares, the average cost per share is recalculated
+- When you sell, P&L is calculated against the average cost (not the specific purchase price)
+- Formula: `(old_avg_cost × old_qty + new_buy_price × new_qty) / total_qty`
 
-**Models** (`app/models.py`):
+**Cost Basis**
+- Total amount invested in current holdings
+- Calculated as: `quantity × average_cost`
+- Updates when you buy (affects avg cost) or sell (affects quantity)
 
-- `Holding` — Individual purchase record (preserves cost basis)
-- `Transaction` — Buy/sell action record (audit trail)
+**Unrealized P&L**
+- Profit/loss if you sold all shares at current market price
+- Calculated as: `market_value - cost_basis`
+- Updates daily with price changes and on buy/sell transactions
 
-### Frontend (HTML + Vanilla JS)
+**Realized P&L**
+- Actual profit/loss from completed sales
+- Only calculated when you sell: `(sale_price - avg_cost) × qty_sold`
 
-**UI Sections** (`templates/index.html` + `static/js/app.js`):
-
-1. **Header** — Portfolio summary (total value, total shares)
-2. **Buy Stock** — Dropdown ticker selector → auto-fetch price → enter quantity & date
-3. **Sell Stock** — Select from current holdings → enter quantity to sell → record transaction
-4. **Portfolio** — Consolidated view (total shares + avg price per ticker)
-5. **Transaction History** — All buys and sells with dates
-
-**Real-time Updates**:
-
-- Select ticker → fetch current price via `/api/price/<ticker>`
-- Select stock to sell → display available quantity & current price
-- Submit buy/sell → reload portfolio and transaction history
-
-### Price Data Integration
-
-**Price Fetching** (`GET /api/price/<ticker>`):
-
-1. Try AWS cached price API (primary source)
-2. Fall back to Yahoo Finance API via `yfinance` library
-3. If both sources fail, return error
-
-**Why Two Sources?**
-
-- AWS cached API provides fast, reliable pricing with rate-limiting built-in
-- yfinance provides fallback for any ticker not in AWS cache
-
-### Database Schema
-
-```sql
--- Holdings table: individual purchases (cost basis preserved)
-CREATE TABLE holdings (
-  id INTEGER PRIMARY KEY,
-  ticker VARCHAR(10) NOT NULL,
-  quantity FLOAT NOT NULL,
-  purchase_price FLOAT NOT NULL,
-  purchase_date DATE NOT NULL DEFAULT TODAY
-);
-
--- Transactions table: audit trail of all trades
-CREATE TABLE transactions (
-  id INTEGER PRIMARY KEY,
-  action VARCHAR(4) NOT NULL,  -- 'buy' or 'sell'
-  ticker VARCHAR(10) NOT NULL,
-  quantity FLOAT NOT NULL,
-  price FLOAT NOT NULL,
-  transaction_date DATE NOT NULL DEFAULT TODAY
-);
-```
-
-## Design Decisions
-
-- **Separate Holdings** — Each purchase stored separately to preserve cost basis for tax reporting
-- **Consolidated View** — Frontend groups holdings by ticker with average purchase price calculated on-the-fly
-- **Transaction History** — All buys and sells logged as immutable audit trail
-- **Auto Price Lookup** — Stock price auto-populated when ticker selected; frontend handles UX
-- **Dual Price Sources** — Uses AWS cached API for reliability and speed, with yfinance fallback for any ticker
+**Win Rate**
+- Percentage of sell transactions that were profitable (P&L > 0)
+- Break-even sales (P&L = 0) are not counted as wins
 
 
 ## Presentation link (canva)

@@ -9,12 +9,6 @@ from app import db, performance, price_backfill
 from app.models import User, PriceHistory, Transaction
 
 api = Blueprint("api", __name__, url_prefix="/api")
-
-# Yahoo Finance blocks plain requests-library traffic from most cloud/CI
-# IPs (returns empty body -> yfinance raises "Expecting value: line 1
-# column 1 (char 0)" / "possibly delisted"). Giving yfinance a session
-# that impersonates a real browser's TLS fingerprint fixes this - it's
-# not about the ticker being invalid, real tickers get the same error.
 app = Flask(__name__)
 _yf_session = curl_requests.Session(impersonate="chrome")
 
@@ -376,16 +370,15 @@ def sell_holding():
     }), 201
 
 
-@api.route("/consolidated", methods=["GET"])
+@api.route("/portfolio", methods=["GET"])
 @swag_from(
     {
         "tags": ["Portfolio"],
-        "summary": "Get consolidated portfolio (grouped by ticker)",
-        "responses": {200: {"description": "Consolidated holdings by ticker"}},
+        "summary": "Get portfolio holdings (grouped by ticker)",
+        "responses": {200: {"description": "Portfolio holdings by ticker"}},
     }
 )
-def get_consolidated():
-    # Get all tickers from transaction history
+def get_portfolio():
     tickers = performance.all_tickers()
 
     result = []
@@ -399,12 +392,6 @@ def get_consolidated():
             })
 
     return jsonify(result), 200
-
-
-# Alias /api/portfolio to the consolidated endpoint (used by tests and UI)
-@api.route("/portfolio", methods=["GET"])
-def get_portfolio():
-    return get_consolidated()
 
 
 @api.route("/transactions", methods=["GET"])

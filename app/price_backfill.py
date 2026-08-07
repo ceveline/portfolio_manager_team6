@@ -13,10 +13,6 @@ import yfinance as yf
 from app import db
 from app.models import PriceHistory
 
-# Same fix as app/routes.py: Yahoo blocks plain requests-library traffic
-# and yfinance raises a JSONDecodeError / "possibly delisted" for real,
-# valid tickers as a result. Impersonating a browser TLS fingerprint
-# fixes it.
 _yf_session = curl_requests.Session(impersonate="chrome")
 
 

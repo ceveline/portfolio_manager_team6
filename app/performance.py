@@ -12,8 +12,6 @@ that average without changing it.
 
 from datetime import timedelta
 
-from sqlalchemy import func
-
 from app import db
 from app.models import PriceHistory, Transaction
 
@@ -66,43 +64,6 @@ def replay_position(ticker):
         "total_invested": round(total_invested, 2),
         "total_divested": round(total_divested, 2),
     }
-
-
-def shares_held_as_of(ticker, as_of_date):
-    """Net shares held for a ticker at end-of-day on as_of_date."""
-    buys = (
-        db.session.query(func.coalesce(func.sum(Transaction.quantity), 0))
-        .filter(
-            Transaction.ticker == ticker,
-            Transaction.action == "buy",
-            Transaction.transaction_date <= as_of_date,
-        )
-        .scalar()
-    )
-    sells = (
-        db.session.query(func.coalesce(func.sum(Transaction.quantity), 0))
-        .filter(
-            Transaction.ticker == ticker,
-            Transaction.action == "sell",
-            Transaction.transaction_date <= as_of_date,
-        )
-        .scalar()
-    )
-    return float(buys) - float(sells)
-
-
-def price_on_or_before(ticker, as_of_date):
-    """Latest known close for ticker on or before as_of_date (forward
-    fills over weekends/holidays that have no price_history row).
-    """
-    row = (
-        PriceHistory.query.filter(
-            PriceHistory.ticker == ticker, PriceHistory.price_date <= as_of_date
-        )
-        .order_by(PriceHistory.price_date.desc())
-        .first()
-    )
-    return row.close_price if row else None
 
 
 def portfolio_value_series(start_date, end_date, tickers=None):

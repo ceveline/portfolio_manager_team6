@@ -1727,17 +1727,6 @@ document.querySelectorAll(".perf-period-btn").forEach(btn => {
   });
 });
 
-async function updateMetricsForDate(dateStr) {
-  try {
-    const response = await fetch(`${API_BASE}/summary-as-of?date=${dateStr}`);
-    if (!response.ok) throw new Error("Failed to fetch metrics");
-
-    const summary = await response.json();
-    updateMetricsDisplay(summary);
-  } catch (err) {
-    console.error("Error fetching metrics for date:", err);
-  }
-}
 
 function updateMetricsDisplay(summary) {
   // Update cost basis
@@ -1802,17 +1791,6 @@ function updateMetricsDisplay(summary) {
   applyMetricCardBorders(summary);
 }
 
-async function updateChartsForDate(dateStr) {
-  try {
-    const response = await fetch(`${API_BASE}/summary-as-of?date=${dateStr}`);
-    if (!response.ok) throw new Error("Failed to fetch charts data");
-
-    const summary = await response.json();
-    renderPnLBarChart(summary.positions);
-  } catch (err) {
-    console.error("Error updating charts for date:", err);
-  }
-}
 
 // Add sortable header click handlers
 document.querySelectorAll("th.sortable").forEach(th => {
